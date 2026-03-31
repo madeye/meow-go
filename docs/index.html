@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meow - A Smart Cat for Your Internet</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            min-height: 100vh;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 80px 20px 40px;
+            background: linear-gradient(135deg, #1a1a2e 0%, #2d1b69 50%, #1a1a2e 100%);
+        }
+        .hero img {
+            width: 128px;
+            height: 128px;
+            border-radius: 28px;
+            box-shadow: 0 8px 32px rgba(108, 92, 231, 0.4);
+            margin-bottom: 24px;
+        }
+        .hero h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .hero .tagline {
+            font-size: 1.25rem;
+            color: #b8b5ff;
+            margin-bottom: 32px;
+        }
+        .hero .desc {
+            max-width: 560px;
+            margin: 0 auto 40px;
+            font-size: 1.1rem;
+            line-height: 1.7;
+            color: #ccc;
+        }
+
+        .badges {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 14px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        .badge-play {
+            background: #6c5ce7;
+            color: #fff;
+        }
+        .badge-github {
+            background: #333;
+            color: #fff;
+        }
+        .badge svg { width: 24px; height: 24px; fill: currentColor; }
+
+        .features {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 60px 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+        .feature {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 28px;
+            transition: background 0.2s;
+        }
+        .feature:hover {
+            background: rgba(255,255,255,0.08);
+        }
+        .feature .icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+        .feature h3 {
+            font-size: 1.15rem;
+            margin-bottom: 8px;
+            color: #b8b5ff;
+        }
+        .feature p {
+            font-size: 0.95rem;
+            color: #aaa;
+            line-height: 1.6;
+        }
+
+        .screenshots {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px 20px 60px;
+            text-align: center;
+        }
+        .screenshots h2 {
+            font-size: 1.8rem;
+            margin-bottom: 32px;
+            color: #b8b5ff;
+        }
+        .screenshots .scroll {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .screenshots img {
+            height: 420px;
+            border-radius: 16px;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+
+        footer {
+            text-align: center;
+            padding: 40px 20px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+            color: #666;
+            font-size: 0.9rem;
+        }
+        footer a { color: #b8b5ff; text-decoration: none; }
+        footer a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <img src="icon.png" alt="Meow app icon">
+    <h1>Meow</h1>
+    <p class="tagline">A smart cat that helps you leap over firewalls</p>
+    <p class="desc">
+        Meet your adorable feline companion on the internet. With soft paws and sharp instincts,
+        Meow quietly guides your traffic through walls and obstacles &mdash; landing safely on the
+        other side every time.
+    </p>
+    <div class="badges">
+        <a class="badge badge-play" href="https://play.google.com/store/apps/details?id=io.github.madeye.meow">
+            <svg viewBox="0 0 24 24"><path d="M3.61 1.814L13.793 12 3.61 22.186a.996.996 0 0 1-.61-.92V2.734c0-.384.22-.72.61-.92zm1.06-.46l11.06 6.39L6.29 11.09 4.67 1.354zM4.67 22.646l1.62-9.736 9.44 3.346-11.06 6.39zm16.28-11.58L18.4 12l2.55 1.934L24 12l-3.05-1.934z"/></svg>
+            Google Play
+        </a>
+        <a class="badge badge-github" href="https://github.com/madeye/meow">
+            <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/></svg>
+            Source Code
+        </a>
+    </div>
+</div>
+
+<div class="features">
+    <div class="feature">
+        <div class="icon">&#128049;</div>
+        <h3>One-Tap Connect</h3>
+        <p>So simple even a cat can do it. Flip the switch and your kitty roams free across the internet.</p>
+    </div>
+    <div class="feature">
+        <div class="icon">&#128272;</div>
+        <h3>Shadowsocks &amp; Trojan</h3>
+        <p>Built-in support for popular proxy protocols. Powered by mihomo-rust for blazing fast performance.</p>
+    </div>
+    <div class="feature">
+        <div class="icon">&#128506;</div>
+        <h3>Smart Routing</h3>
+        <p>Rule-based traffic routing sends only what's needed through the tunnel. Your cat knows all the secret paths.</p>
+    </div>
+    <div class="feature">
+        <div class="icon">&#128200;</div>
+        <h3>Traffic Monitor</h3>
+        <p>Real-time speed charts and session statistics. See exactly where your traffic goes with pretty visualizations.</p>
+    </div>
+    <div class="feature">
+        <div class="icon">&#128196;</div>
+        <h3>Subscription Support</h3>
+        <p>Import server configs from subscription URLs. One tap to add, auto-update to stay current.</p>
+    </div>
+    <div class="feature">
+        <div class="icon">&#128737;</div>
+        <h3>Privacy First</h3>
+        <p>No analytics, no tracking, no ads. Fully open source &mdash; verify every line of code yourself.</p>
+    </div>
+</div>
+
+<div class="screenshots">
+    <h2>Screenshots</h2>
+    <div class="scroll">
+        <img src="screenshots/home.png" alt="Home screen">
+        <img src="screenshots/subscribe.png" alt="Subscriptions">
+        <img src="screenshots/traffic.png" alt="Traffic monitor">
+        <img src="screenshots/settings.png" alt="Settings">
+    </div>
+</div>
+
+<footer>
+    <p>
+        <a href="privacy-policy.html">Privacy Policy</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://github.com/madeye/meow">GitHub</a>
+        &nbsp;&middot;&nbsp;
+        <a href="https://github.com/madeye/meow/issues">Feedback</a>
+    </p>
+    <p style="margin-top: 12px;">Made with love. Meow~</p>
+</footer>
+
+</body>
+</html>
