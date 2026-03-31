@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Meow</string>
+    <string name="profile_empty">No profile selected</string>
+    <string name="service_failed">Service failed</string>
+    <string name="reboot_required">Reboot required</string>
+</resources>
