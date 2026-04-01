@@ -385,23 +385,14 @@ else
 fi
 
 ensure_emulator
-info "  Test 5: HTTP request..."
-# Use a shell script on device: write HTTP request, then sleep to keep connection open for response.
-HTTP_OUT=$("$ADB" shell "{ printf 'GET /config.yaml HTTP/1.0\r\nHost: 10.0.2.2\r\nConnection: close\r\n\r\n'; sleep 5; } | nc 10.0.2.2 $SUB_PORT 2>/dev/null | head -1" | tr -d '\r' || true)
+info "  Test 5: HTTP request (Google generate_204)..."
+HTTP_OUT=$("$ADB" shell "{ printf 'GET /generate_204 HTTP/1.0\r\nHost: connectivitycheck.gstatic.com\r\nConnection: close\r\n\r\n'; sleep 5; } | nc connectivitycheck.gstatic.com 80 2>/dev/null | head -1" | tr -d '\r' || true)
 info "  HTTP response: $HTTP_OUT"
-if echo "$HTTP_OUT" | grep -qE "HTTP/.* 200"; then
-    info "  PASS: HTTP 200"; PASS=$((PASS + 1))
+if echo "$HTTP_OUT" | grep -qE "HTTP/.* (200|204|301|302)"; then
+    HTTP_CODE=$(echo "$HTTP_OUT" | grep -oE "[0-9]{3}" | head -1)
+    info "  PASS: HTTP $HTTP_CODE"; PASS=$((PASS + 1))
 else
-    # Fallback: try Google's generate_204 endpoint
-    info "  Trying Google generate_204..."
-    HTTP_OUT2=$("$ADB" shell "{ printf 'GET /generate_204 HTTP/1.0\r\nHost: connectivitycheck.gstatic.com\r\nConnection: close\r\n\r\n'; sleep 5; } | nc 142.251.46.228 80 2>/dev/null | head -1" | tr -d '\r' || true)
-    info "  HTTP response: $HTTP_OUT2"
-    if echo "$HTTP_OUT2" | grep -qE "HTTP/.* (200|204|301|302)"; then
-        HTTP_CODE=$(echo "$HTTP_OUT2" | grep -oE "[0-9]{3}" | head -1)
-        info "  PASS: HTTP $HTTP_CODE"; PASS=$((PASS + 1))
-    else
-        echo "  FAIL: HTTP requests failed"
-    fi
+    echo "  FAIL: HTTP request failed"
 fi
 
 # Stop logcat collection
