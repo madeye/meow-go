@@ -1,0 +1,36 @@
+default_platform(:android)
+
+platform :android do
+  desc "Deploy to Google Play internal testing track"
+  lane :internal do
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      aab: "mobile/build/outputs/bundle/release/mobile-release.aab",
+      skip_upload_metadata: false,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+
+  desc "Promote internal to production"
+  lane :production do
+    upload_to_play_store(
+      track: "internal",
+      track_promote_to: "production"
+    )
+  end
+
+  desc "Update store listing metadata only"
+  lane :metadata do
+    upload_to_play_store(
+      track: "internal",
+      release_status: "draft",
+      version_code: 1000003,
+      skip_upload_aab: true,
+      skip_upload_apk: true,
+      skip_upload_images: false,
+      skip_upload_screenshots: false
+    )
+  end
+end

@@ -35,6 +35,7 @@ Thumbs.db
 *.env
 credentials.json
 google-services.json
+fastlane/play-store-key.json
 
 # E2E test artifacts
 screen_*.png

@@ -22,13 +22,6 @@ class ServiceNotification(
                 NotificationChannel(channelId, "Mihomo VPN Service", NotificationManager.IMPORTANCE_LOW)
             )
         }
-        val notification = NotificationCompat.Builder(service, channelId)
-            .setContentTitle("Mihomo")
-            .setContentText(if (profileName.isNotEmpty()) "Connected: $profileName" else "Connecting...")
-            .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .setOngoing(true)
-            .build()
-        service.startForeground(NOTIFICATION_ID, notification)
     }
 
     fun destroy() {

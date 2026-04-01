@@ -146,8 +146,7 @@ object BaseService {
 
         fun startRunner() {
             this as Context
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(Intent(this, javaClass))
-            else startService(Intent(this, javaClass))
+            startService(Intent(this, javaClass))
         }
 
         fun killProcesses(scope: CoroutineScope) {

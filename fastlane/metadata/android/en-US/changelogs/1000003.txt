@@ -1,0 +1,2 @@
+- Remove unnecessary FOREGROUND_SERVICE_SPECIAL_USE permission
+- Bug fixes and improvements

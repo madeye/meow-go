@@ -21,6 +21,10 @@ class MihomoInstance(val profile: ClashProfile) {
         val yaml = profile.yamlContent
             .replace(Regex("(?m)^subscriptions:.*?(?=^[a-z]|\\Z)", RegexOption.DOT_MATCHES_ALL), "")
             .replace(Regex("(?m)^dns:.*?(?=^[a-z]|\\Z)", RegexOption.DOT_MATCHES_ALL), "dns:\n  enable: false\n")
+            .replace(Regex("(?m)^port:.*\n?"), "")
+            .replace(Regex("(?m)^socks-port:.*\n?"), "")
+            .replace(Regex("(?m)^mixed-port:.*\n?"), "")
+            .let { "mixed-port: 7890\n$it" }
         configFile.writeText(yaml)
         MihomoCore.nativeSetHomeDir(configDir.absolutePath)
         val result = MihomoCore.nativeStartEngine("127.0.0.1:9090", "")

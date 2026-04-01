@@ -48,7 +48,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                 when (call.method) {
                     "connect" -> { startVpnWithPermission(); result.success(null) }
                     "disconnect" -> {
-                        sendBroadcast(Intent(io.github.madeye.meow.utils.Action.CLOSE))
+                        sendBroadcast(Intent(io.github.madeye.meow.utils.Action.CLOSE).setPackage(packageName))
                         result.success(null)
                     }
                     "getState" -> result.success(state.ordinal)
@@ -174,7 +174,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
     }
 
     private fun startVpn() {
-        startForegroundService(Intent(this, io.github.madeye.meow.bg.VpnService::class.java))
+        startService(Intent(this, io.github.madeye.meow.bg.VpnService::class.java))
     }
 
     @Deprecated("Use Activity Result API")

@@ -48,8 +48,8 @@ fun Project.setupCore() {
     setupCommon()
     android.apply {
         defaultConfig {
-            versionCode = 1000000
-            versionName = "0.1.0"
+            versionCode = 1000003
+            versionName = "0.1.3"
         }
         compileOptions.isCoreLibraryDesugaringEnabled = true
         lint.apply {
@@ -76,8 +76,7 @@ fun Project.setupApp() {
         }
         packagingOptions.jniLibs.useLegacyPackaging = true
         splits.abi {
-            isEnable = true
-            isUniversalApk = true
+            isEnable = false
         }
     }
 

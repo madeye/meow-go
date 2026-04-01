@@ -30,7 +30,11 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadState();
     profileChanged.addListener(_loadState);
     _stateSub = _vpn.stateStream.listen((s) {
+      final wasConnected = _state == VpnState.connected;
       if (mounted) setState(() => _state = s);
+      if (!wasConnected && s == VpnState.connected && _selectedProxy != null && _profile != null) {
+        _vpn.selectProxyNode(_selectedProxy!, _profile!.yamlContent);
+      }
     });
     _trafficSub = _vpn.trafficStream.listen((t) {
       if (mounted) setState(() => _traffic = t);
@@ -92,7 +96,17 @@ class _HomeScreenState extends State<HomeScreen> {
           // App bar with switch
           SliverAppBar(
             pinned: true,
-            title: Text(s.appName),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(s.appName),
+                if (_selectedProxy != null && isOn)
+                  Text(
+                    _selectedProxy!,
+                    style: const TextStyle(fontSize: 12, color: Colors.white54, fontWeight: FontWeight.normal),
+                  ),
+              ],
+            ),
             actions: [
               if (isTransitioning)
                 const Padding(
@@ -194,7 +208,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     selected: selected,
                     onTap: () {
                       setState(() => _selectedProxy = name);
-                      // TODO: call platform channel to switch active proxy node
+                      if (_profile != null) {
+                        _vpn.selectProxyNode(name, _profile!.yamlContent);
+                      }
                     },
                   );
                 },

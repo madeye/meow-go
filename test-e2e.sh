@@ -208,41 +208,91 @@ screenshot "02_app_launched"
 
 # Handle VPN consent dialog
 info "  Checking for VPN consent dialog..."
-SCREEN_SIZE=$("$ADB" shell wm size | grep -oE '[0-9]+x[0-9]+' | tail -1)
-SCREEN_W=$(echo "$SCREEN_SIZE" | cut -dx -f1)
-SCREEN_H=$(echo "$SCREEN_SIZE" | cut -dx -f2)
 VPN_ACCEPTED=false
+
+# Helper: try to tap the positive button in the VPN consent dialog.
+# Returns 0 if the dialog is dismissed, 1 otherwise.
+try_dismiss_vpn_dialog() {
+    # Dump current UI hierarchy
+    "$ADB" shell uiautomator dump /sdcard/ui_dump.xml 2>/dev/null || true
+    "$ADB" pull /sdcard/ui_dump.xml /tmp/ui_dump.xml 2>/dev/null || true
+    local ui_xml
+    ui_xml=$(cat /tmp/ui_dump.xml 2>/dev/null || true)
+
+    if [[ -z "$ui_xml" ]]; then
+        info "  uiautomator dump returned empty, skipping XML-based tap"
+        return 1
+    fi
+
+    # Log the dump for debugging
+    info "  UI dump size: ${#ui_xml} bytes"
+
+    # Strategy 1: Find button by resource-id (android:id/button1 is the standard positive button)
+    local ok_line
+    ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep -F 'resource-id="android:id/button1"' | head -1 || true)
+
+    # Strategy 2: Find button by text — match common labels across Android versions/locales
+    if [[ -z "$ok_line" ]]; then
+        ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep -iE 'text="(OK|Ok|ok|Allow|ALLOW|Got it|GOT IT|Okay|OKAY)"' | head -1 || true)
+    fi
+
+    # Strategy 3: Find any clickable Button widget as last resort
+    if [[ -z "$ok_line" ]]; then
+        ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep -E 'class="android\.widget\.Button".*clickable="true"' | tail -1 || true)
+    fi
+
+    if [[ -n "$ok_line" ]]; then
+        local ok_bounds
+        ok_bounds=$(echo "$ok_line" | grep -o 'bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' || true)
+        if [[ -n "$ok_bounds" ]]; then
+            local nums x1 y1 x2 y2
+            nums=$(echo "$ok_bounds" | grep -o '[0-9]*')
+            x1=$(echo "$nums" | sed -n '1p'); y1=$(echo "$nums" | sed -n '2p')
+            x2=$(echo "$nums" | sed -n '3p'); y2=$(echo "$nums" | sed -n '4p')
+            local cx=$(( (x1 + x2) / 2 )) cy=$(( (y1 + y2) / 2 ))
+            info "  Tapping button at ($cx, $cy)"
+            "$ADB" shell input tap "$cx" "$cy"
+            sleep 2
+
+            # Verify dialog was dismissed
+            if ! "$ADB" shell dumpsys activity activities 2>/dev/null | grep -qi "vpndialogs"; then
+                return 0
+            fi
+        fi
+    fi
+    return 1
+}
+
 for i in $(seq 1 15); do
     ACTIVITIES=$("$ADB" shell dumpsys activity activities 2>/dev/null || true)
     if echo "$ACTIVITIES" | grep -qi "vpndialogs\|com.android.vpndialogs"; then
-        info "  VPN consent dialog detected, accepting..."
+        info "  VPN consent dialog detected (attempt $i), accepting..."
         screenshot "03_vpn_dialog"
         sleep 1
 
-        # Use uiautomator to find the OK/Allow button
-        "$ADB" shell uiautomator dump /sdcard/ui_dump.xml 2>/dev/null || true
-        "$ADB" pull /sdcard/ui_dump.xml /tmp/ui_dump.xml 2>/dev/null || true
-        UI_XML=$(cat /tmp/ui_dump.xml 2>/dev/null || true)
-
-        OK_LINE=$(echo "$UI_XML" | tr '>' '\n' | grep -E 'text="OK"|text="Allow"' | head -1 || true)
-        if [[ -n "$OK_LINE" ]]; then
-            OK_BOUNDS=$(echo "$OK_LINE" | grep -o 'bounds="\[[0-9]*,[0-9]*\]\[[0-9]*,[0-9]*\]"' || true)
-            if [[ -n "$OK_BOUNDS" ]]; then
-                NUMS=$(echo "$OK_BOUNDS" | grep -o '[0-9]*')
-                X1=$(echo "$NUMS" | sed -n '1p'); Y1=$(echo "$NUMS" | sed -n '2p')
-                X2=$(echo "$NUMS" | sed -n '3p'); Y2=$(echo "$NUMS" | sed -n '4p')
-                info "  Tapping OK at ($(( (X1 + X2) / 2 )), $(( (Y1 + Y2) / 2 )))"
-                "$ADB" shell input tap $(( (X1 + X2) / 2 )) $(( (Y1 + Y2) / 2 ))
-                sleep 2
+        # Try XML-based button tap (up to 3 attempts — dump can be flaky)
+        for attempt in 1 2 3; do
+            if try_dismiss_vpn_dialog; then
+                VPN_ACCEPTED=true
+                break 2
             fi
-        fi
+            info "  Tap attempt $attempt did not dismiss dialog, retrying..."
+            sleep 1
+        done
 
-        # Fallback: keyboard navigation
+        # Fallback: keyboard navigation (TAB to focus OK button, ENTER to press)
         if "$ADB" shell dumpsys activity activities 2>/dev/null | grep -qi "vpndialogs"; then
-            info "  Dialog still showing, trying TAB+ENTER..."
+            info "  Trying keyboard fallback (TAB+ENTER)..."
             "$ADB" shell input keyevent KEYCODE_TAB; sleep 0.3
             "$ADB" shell input keyevent KEYCODE_TAB; sleep 0.3
             "$ADB" shell input keyevent KEYCODE_ENTER; sleep 2
+        fi
+
+        # Fallback: DPAD navigation (for TV-style or keyboard-driven UIs)
+        if "$ADB" shell dumpsys activity activities 2>/dev/null | grep -qi "vpndialogs"; then
+            info "  Trying DPAD fallback..."
+            "$ADB" shell input keyevent KEYCODE_DPAD_RIGHT; sleep 0.3
+            "$ADB" shell input keyevent KEYCODE_DPAD_CENTER; sleep 2
         fi
 
         VPN_ACCEPTED=true
