@@ -22,11 +22,14 @@ SUB_PORT=8080
 
 SSSERVER_PID=""
 HTTPD_PID=""
+EMU_PID=""
+LOGCAT_PID=""
+LOGCAT_FILE="$SCRIPT_DIR/e2e-logcat.log"
 
 cleanup() {
     echo ""
     echo "=== Cleanup ==="
-    for pid_var in SSSERVER_PID HTTPD_PID; do
+    for pid_var in LOGCAT_PID SSSERVER_PID HTTPD_PID EMU_PID; do
         pid="${!pid_var}"
         if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null; then
             echo "Killing $pid_var (PID $pid)"
@@ -35,10 +38,6 @@ cleanup() {
         fi
     done
     rm -rf /tmp/test-sub
-    if [[ "${SKIP_EMULATOR_BOOT:-}" != "true" ]] && "$ADB" get-state &>/dev/null; then
-        echo "Shutting down emulator..."
-        "$ADB" emu kill 2>/dev/null || true
-    fi
     echo "Cleanup done."
 }
 trap cleanup EXIT
@@ -47,11 +46,19 @@ fail() { echo "FAIL: $*" >&2; exit 1; }
 info() { echo "--- $*"; }
 
 ensure_emulator() {
-    # Quick check: does adb see any device? (no timeout risk)
+    # Check emulator process is alive
+    if [[ -n "$EMU_PID" ]] && ! kill -0 "$EMU_PID" 2>/dev/null; then
+        fail "Emulator process died (PID $EMU_PID)"
+    fi
+    # Check adb sees the device
     local state
-    state=$("$ADB" get-state 2>&1 || true)
+    if command -v timeout &>/dev/null; then
+        state=$(timeout 5 "$ADB" get-state 2>&1 || echo "timeout")
+    else
+        state=$("$ADB" get-state 2>&1 || echo "timeout")
+    fi
     if [[ "$state" != "device" ]]; then
-        fail "Emulator crashed or disconnected (adb state: $state)"
+        fail "Emulator not responding (adb state: $state)"
     fi
 }
 
@@ -144,6 +151,8 @@ if [[ "${SKIP_EMULATOR_BOOT:-}" == "true" ]]; then
 else
     info "Step 4: Booting emulator ($AVD) ..."
     "$EMULATOR" -avd "$AVD" -no-snapshot-load -no-audio -gpu auto &
+    EMU_PID=$!
+    info "Emulator PID: $EMU_PID"
     wait_for_boot
     sleep 5
     "$ADB" shell input keyevent KEYCODE_HOME
@@ -153,6 +162,12 @@ fi
 "$ADB" shell settings put global window_animation_scale 0
 "$ADB" shell settings put global transition_animation_scale 0
 "$ADB" shell settings put global animator_duration_scale 0
+
+# Start logcat in background for real-time diagnostics
+info "Starting background logcat -> $LOGCAT_FILE"
+"$ADB" logcat -c 2>/dev/null || true
+"$ADB" logcat -v threadtime > "$LOGCAT_FILE" 2>&1 &
+LOGCAT_PID=$!
 
 # Step 5: Install APK and tools
 ensure_emulator
@@ -216,45 +231,59 @@ info "  Subscription configuration done."
 ensure_emulator
 info "Step 7: Enabling VPN..."
 
-# Launch app with auto_connect=true intent extra — triggers VPN start after 1s
+# Launch app with auto_connect=true intent extra — triggers VPN start once service reports Stopped
 "$ADB" shell am start -W -n "$PKG/.MainActivity" --ez auto_connect true
-sleep 2
+
+# Wait for Flutter UI to load (splash screen takes several seconds)
+info "  Waiting for Flutter UI to render..."
+FLUTTER_READY=false
+for i in $(seq 1 30); do
+    "$ADB" shell uiautomator dump /sdcard/ui_dump.xml 2>/dev/null || true
+    UI_CHECK=$("$ADB" shell cat /sdcard/ui_dump.xml 2>/dev/null || true)
+    # Flutter home screen has the app title "Meow" or Chinese equivalent
+    if echo "$UI_CHECK" | grep -qiE 'text="Meow"|text=".*断开.*"|text=".*连接.*"'; then
+        FLUTTER_READY=true
+        info "  Flutter UI loaded (attempt $i)"
+        break
+    fi
+    sleep 1
+done
+if [[ "$FLUTTER_READY" != "true" ]]; then
+    info "  WARNING: Flutter UI not detected after 30s, proceeding anyway"
+fi
 screenshot "02_app_launched"
 
 # Handle VPN consent dialog
 info "  Checking for VPN consent dialog..."
 VPN_ACCEPTED=false
 
-# Helper: try to tap the positive button in the VPN consent dialog.
-# Returns 0 if the dialog is dismissed, 1 otherwise.
+# Helper: dump UI and find the VPN consent dialog's positive button.
+# Taps it and returns 0. Returns 1 if no suitable button found.
 try_dismiss_vpn_dialog() {
-    # Dump current UI hierarchy
     "$ADB" shell uiautomator dump /sdcard/ui_dump.xml 2>/dev/null || true
     "$ADB" pull /sdcard/ui_dump.xml /tmp/ui_dump.xml 2>/dev/null || true
     local ui_xml
     ui_xml=$(cat /tmp/ui_dump.xml 2>/dev/null || true)
 
     if [[ -z "$ui_xml" ]]; then
-        info "  uiautomator dump returned empty, skipping XML-based tap"
+        info "  uiautomator dump returned empty"
         return 1
     fi
 
-    # Log the dump for debugging
     info "  UI dump size: ${#ui_xml} bytes"
+    cp /tmp/ui_dump.xml "$SCRIPT_DIR/ui_dump_vpn_dialog.xml" 2>/dev/null || true
 
-    # Strategy 1: Find button by resource-id (android:id/button1 is the standard positive button)
+    # Only match buttons that belong to the VPN dialog (com.android.vpndialogs package)
+    # Strategy 1: resource-id android:id/button1 (standard positive button)
     local ok_line
     ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep -F 'resource-id="android:id/button1"' | head -1 || true)
 
-    # Strategy 2: Find button by text — match common labels across Android versions/locales
+    # Strategy 2: text match for OK/Allow/确定/允许 — only within vpndialogs package
     if [[ -z "$ok_line" ]]; then
-        ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep -iE 'text="(OK|Ok|ok|Allow|ALLOW|Got it|GOT IT|Okay|OKAY)"' | head -1 || true)
+        ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep 'package="com.android.vpndialogs"' | grep -iE 'text="(OK|Ok|ok|Allow|ALLOW|Got it|GOT IT|Okay|OKAY|确定|允许)"' | head -1 || true)
     fi
 
-    # Strategy 3: Find any clickable Button widget as last resort
-    if [[ -z "$ok_line" ]]; then
-        ok_line=$(echo "$ui_xml" | tr '>' '\n' | grep -E 'class="android\.widget\.Button".*clickable="true"' | tail -1 || true)
-    fi
+    # No Strategy 3 — tapping arbitrary buttons is dangerous (can hit Flutter nav bar)
 
     if [[ -n "$ok_line" ]]; then
         local ok_bounds
@@ -265,52 +294,41 @@ try_dismiss_vpn_dialog() {
             x1=$(echo "$nums" | sed -n '1p'); y1=$(echo "$nums" | sed -n '2p')
             x2=$(echo "$nums" | sed -n '3p'); y2=$(echo "$nums" | sed -n '4p')
             local cx=$(( (x1 + x2) / 2 )) cy=$(( (y1 + y2) / 2 ))
-            info "  Tapping button at ($cx, $cy)"
+            info "  Tapping VPN dialog button at ($cx, $cy)"
             "$ADB" shell input tap "$cx" "$cy"
-            sleep 2
-
-            # Verify dialog was dismissed
-            if ! "$ADB" shell dumpsys activity activities 2>/dev/null | grep -qi "vpndialogs"; then
-                return 0
-            fi
+            return 0
         fi
     fi
     return 1
 }
 
-for i in $(seq 1 15); do
+# Wait for the VPN consent dialog to appear, then dismiss it
+for i in $(seq 1 20); do
     ACTIVITIES=$("$ADB" shell dumpsys activity activities 2>/dev/null || true)
     if echo "$ACTIVITIES" | grep -qi "vpndialogs\|com.android.vpndialogs"; then
         info "  VPN consent dialog detected (attempt $i), accepting..."
         screenshot "03_vpn_dialog"
         sleep 1
 
-        # Try XML-based button tap (up to 3 attempts — dump can be flaky)
+        # Try to find and tap the OK button (up to 3 attempts for flaky dumps)
         for attempt in 1 2 3; do
             if try_dismiss_vpn_dialog; then
+                # Button was tapped — wait for the dialog activity to finish
+                sleep 3
                 VPN_ACCEPTED=true
                 break 2
             fi
-            info "  Tap attempt $attempt did not dismiss dialog, retrying..."
+            info "  No dialog button found on attempt $attempt, retrying..."
             sleep 1
         done
 
-        # Fallback: keyboard navigation (TAB to focus OK button, ENTER to press)
-        if "$ADB" shell dumpsys activity activities 2>/dev/null | grep -qi "vpndialogs"; then
-            info "  Trying keyboard fallback (TAB+ENTER)..."
-            "$ADB" shell input keyevent KEYCODE_TAB; sleep 0.3
-            "$ADB" shell input keyevent KEYCODE_TAB; sleep 0.3
-            "$ADB" shell input keyevent KEYCODE_ENTER; sleep 2
+        # Fallback: blind tap at the "确定" button's known position on 1080x2400
+        if [[ "$VPN_ACCEPTED" != "true" ]]; then
+            info "  Trying blind tap at known button position..."
+            "$ADB" shell input tap 894 1494; sleep 3
+            VPN_ACCEPTED=true
         fi
 
-        # Fallback: DPAD navigation (for TV-style or keyboard-driven UIs)
-        if "$ADB" shell dumpsys activity activities 2>/dev/null | grep -qi "vpndialogs"; then
-            info "  Trying DPAD fallback..."
-            "$ADB" shell input keyevent KEYCODE_DPAD_RIGHT; sleep 0.3
-            "$ADB" shell input keyevent KEYCODE_DPAD_CENTER; sleep 2
-        fi
-
-        VPN_ACCEPTED=true
         screenshot "04_after_vpn_accept"
         break
     fi
@@ -386,15 +404,27 @@ else
     fi
 fi
 
-info "  Recent VPN logcat:"
-"$ADB" logcat -d 2>/dev/null | grep -iE "mihomo|vpn|tun" | tail -30 || true
+# Stop logcat collection
+if [[ -n "$LOGCAT_PID" ]] && kill -0 "$LOGCAT_PID" 2>/dev/null; then
+    kill "$LOGCAT_PID" 2>/dev/null || true
+    wait "$LOGCAT_PID" 2>/dev/null || true
+    LOGCAT_PID=""
+fi
 
 echo ""
 echo "========================================"
 echo "  E2E Test Results: $PASS/$TOTAL passed"
 echo "========================================"
 if [[ $PASS -eq $TOTAL ]]; then
-    echo "  ALL TESTS PASSED"; exit 0
+    info "Relevant logcat (VPN/mihomo):"
+    grep -iE "mihomo|meow|vpn|tun" "$LOGCAT_FILE" | tail -30 || true
+    echo "  ALL TESTS PASSED"
+    echo "  Full logcat: $LOGCAT_FILE"
+    exit 0
 else
-    echo "  SOME TESTS FAILED"; exit 1
+    info "Relevant logcat (VPN/mihomo):"
+    grep -iE "mihomo|meow|vpn|tun" "$LOGCAT_FILE" | tail -50 || true
+    echo "  SOME TESTS FAILED"
+    echo "  Full logcat: $LOGCAT_FILE"
+    exit 1
 fi
