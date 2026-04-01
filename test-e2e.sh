@@ -145,15 +145,7 @@ info "Step 5: Installing debug APK ..."
 "$ADB" install -g "$APK" || fail "APK install failed"
 info "APK installed."
 
-# Push static curl binary for HTTP testing
-CURL_STATIC="${CURL_STATIC:-/tmp/curl-aarch64}"
-if [[ -f "$CURL_STATIC" ]]; then
-    "$ADB" push "$CURL_STATIC" /data/local/tmp/curl
-    "$ADB" shell chmod 755 /data/local/tmp/curl
-    info "Static curl pushed to emulator."
-else
-    info "WARNING: Static curl not found at $CURL_STATIC, HTTP test may fail"
-fi
+# No external curl needed — use toybox wget built into Android
 
 # Step 6: Configure subscription
 info "Step 6: Configuring subscription..."
@@ -352,25 +344,23 @@ else
     echo "  FAIL (exit=$NC2)"
 fi
 
-info "  Test 5: HTTP request (curl)..."
-# Use IP directly to bypass DNS. Connect to httpbin.org's IP for a simple HTTP test.
-# 142.251.46.228 is a Google IP that serves generate_204.
-# Use --resolve to map hostname to avoid DNS, and -H Host header for HTTP routing.
-CURL_OUT=$("$ADB" shell "/data/local/tmp/curl -s -o /dev/null -w '%{http_code}' --connect-timeout 15 http://142.251.46.228/generate_204" 2>&1 | tr -d '\r' || true)
-info "  curl to IP returned: $CURL_OUT"
-HTTP_CODE=$(echo "$CURL_OUT" | grep -oE '[0-9]{3}' | tail -1)
-if [[ "$HTTP_CODE" == "204" || "$HTTP_CODE" == "200" || "$HTTP_CODE" == "301" || "$HTTP_CODE" == "302" ]]; then
+info "  Test 5: HTTP request (wget)..."
+# Use toybox wget (built into Android) to test HTTP connectivity.
+# Google's generate_204 endpoint returns HTTP 204.
+WGET_OUT=$("$ADB" shell "wget -q -S -O /dev/null --timeout=15 http://connectivitycheck.gstatic.com/generate_204 2>&1" | tr -d '\r' || true)
+info "  wget output: $WGET_OUT"
+if echo "$WGET_OUT" | grep -qE "HTTP/.* (200|204|301|302)"; then
+    HTTP_CODE=$(echo "$WGET_OUT" | grep -oE "HTTP/.* [0-9]+" | grep -oE "[0-9]+$" | head -1)
     info "  PASS: HTTP $HTTP_CODE"; PASS=$((PASS + 1))
 else
-    # Fallback: try the emulator host's HTTP subscription server through the proxy
+    # Fallback: try the emulator host's HTTP subscription server
     info "  Trying subscription server at 10.0.2.2:$SUB_PORT..."
-    CURL_OUT2=$("$ADB" shell "/data/local/tmp/curl -s -o /dev/null -w '%{http_code}' --connect-timeout 10 http://10.0.2.2:$SUB_PORT/config.yaml" 2>&1 | tr -d '\r' || true)
-    HTTP_CODE2=$(echo "$CURL_OUT2" | grep -oE '[0-9]{3}' | tail -1)
-    info "  curl to sub server returned: $HTTP_CODE2"
-    if [[ "$HTTP_CODE2" == "200" ]]; then
+    WGET_OUT2=$("$ADB" shell "wget -q -S -O /dev/null --timeout=10 http://10.0.2.2:$SUB_PORT/config.yaml 2>&1" | tr -d '\r' || true)
+    info "  wget to sub server: $WGET_OUT2"
+    if echo "$WGET_OUT2" | grep -qE "HTTP/.* 200"; then
         info "  PASS: HTTP 200 from subscription server"; PASS=$((PASS + 1))
     else
-        echo "  FAIL: HTTP requests returned: google=$HTTP_CODE sub=$HTTP_CODE2"
+        echo "  FAIL: HTTP requests failed"
     fi
 fi
 
