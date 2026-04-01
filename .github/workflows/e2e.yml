@@ -97,9 +97,15 @@ jobs:
 
       - name: Download Android static curl for x86_64
         run: |
-          CURL_VERSION="8.7.1"
-          curl -L -o /tmp/curl-x86_64 "https://github.com/moparisthebest/static-curl/releases/download/v${CURL_VERSION}/curl-android-x86_64"
-          chmod +x /tmp/curl-x86_64
+          curl -L -o /tmp/curl-x86_64 "https://github.com/moparisthebest/static-curl/releases/latest/download/curl-android-x86_64" || \
+          curl -L -o /tmp/curl-x86_64 "https://github.com/nicktrav/static-curl/releases/latest/download/curl-android-x86_64" || true
+          if file /tmp/curl-x86_64 2>/dev/null | grep -q ELF; then
+            chmod +x /tmp/curl-x86_64
+            echo "Static curl downloaded successfully"
+          else
+            echo "WARNING: Could not download valid static curl binary, HTTP test will be skipped"
+            rm -f /tmp/curl-x86_64
+          fi
 
       - name: Enable KVM
         run: |
