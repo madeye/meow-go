@@ -46,11 +46,26 @@ trap cleanup EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 info() { echo "--- $*"; }
 
+ensure_emulator() {
+    # Quick check: does adb see any device? (no timeout risk)
+    local state
+    state=$("$ADB" get-state 2>&1 || true)
+    if [[ "$state" != "device" ]]; then
+        fail "Emulator crashed or disconnected (adb state: $state)"
+    fi
+}
+
 wait_for_boot() {
     info "Waiting for emulator to boot..."
     "$ADB" wait-for-device
     local n=0
     while [[ $n -lt 120 ]]; do
+        # Check if emulator process is still alive
+        if ! "$ADB" get-state 2>/dev/null | grep -q "device"; then
+            if [[ $n -gt 10 ]]; then
+                fail "Emulator process died during boot"
+            fi
+        fi
         local val
         val=$("$ADB" shell getprop sys.boot_completed 2>/dev/null | tr -d '\r\n')
         if [[ "$val" == "1" ]]; then
@@ -140,12 +155,13 @@ fi
 "$ADB" shell settings put global animator_duration_scale 0
 
 # Step 5: Install APK and tools
+ensure_emulator
 info "Step 5: Installing debug APK ..."
 "$ADB" uninstall "$PKG" 2>/dev/null || true
 "$ADB" install -g "$APK" || fail "APK install failed"
 info "APK installed."
 
-# No external curl needed — use toybox wget built into Android
+# No external binaries needed — tests use nc (netcat) built into Android
 
 # Step 6: Configure subscription
 info "Step 6: Configuring subscription..."
@@ -197,6 +213,7 @@ done
 info "  Subscription configuration done."
 
 # Step 7: Enable VPN
+ensure_emulator
 info "Step 7: Enabling VPN..."
 
 # Launch app with auto_connect=true intent extra — triggers VPN start after 1s
@@ -305,6 +322,7 @@ if [[ "$VPN_ACCEPTED" != "true" ]]; then
 fi
 
 # Step 8: Verify connectivity
+ensure_emulator
 info "Step 8: Verifying VPN connection..."
 sleep 8
 screenshot "05_vpn_status"
@@ -312,6 +330,7 @@ screenshot "05_vpn_status"
 PASS=0
 TOTAL=5
 
+ensure_emulator
 info "  Test 1: tun0 interface..."
 TUN_CHECK=$("$ADB" shell ip addr show tun0 2>&1 || true)
 if echo "$TUN_CHECK" | grep -q "inet "; then
@@ -320,6 +339,7 @@ else
     echo "  FAIL: tun0 not found"
 fi
 
+ensure_emulator
 info "  Test 2: DNS resolution..."
 DNS_OUT=$("$ADB" shell "ping -c 1 -W 5 google.com 2>&1" || true)
 if echo "$DNS_OUT" | grep -qE "PING google\.com \([0-9]+\.[0-9]+"; then
@@ -328,6 +348,7 @@ else
     echo "  FAIL: DNS failed"
 fi
 
+ensure_emulator
 info "  Test 3: TCP 1.1.1.1:80..."
 NC1=$("$ADB" shell "echo '' | nc -w 5 1.1.1.1 80 >/dev/null 2>&1; echo \$?" | tr -d '\r' | tail -1)
 if [[ "$NC1" == "0" ]]; then
@@ -336,6 +357,7 @@ else
     echo "  FAIL (exit=$NC1)"
 fi
 
+ensure_emulator
 info "  Test 4: TCP 8.8.8.8:443..."
 NC2=$("$ADB" shell "echo '' | nc -w 5 8.8.8.8 443 >/dev/null 2>&1; echo \$?" | tr -d '\r' | tail -1)
 if [[ "$NC2" == "0" ]]; then
@@ -344,21 +366,21 @@ else
     echo "  FAIL (exit=$NC2)"
 fi
 
-info "  Test 5: HTTP request (wget)..."
-# Use toybox wget (built into Android) to test HTTP connectivity.
-# Google's generate_204 endpoint returns HTTP 204.
-WGET_OUT=$("$ADB" shell "wget -q -S -O /dev/null --timeout=15 http://connectivitycheck.gstatic.com/generate_204 2>&1" | tr -d '\r' || true)
-info "  wget output: $WGET_OUT"
-if echo "$WGET_OUT" | grep -qE "HTTP/.* (200|204|301|302)"; then
-    HTTP_CODE=$(echo "$WGET_OUT" | grep -oE "HTTP/.* [0-9]+" | grep -oE "[0-9]+$" | head -1)
-    info "  PASS: HTTP $HTTP_CODE"; PASS=$((PASS + 1))
+ensure_emulator
+info "  Test 5: HTTP request..."
+# Use a shell script on device: write HTTP request, then sleep to keep connection open for response.
+HTTP_OUT=$("$ADB" shell "{ printf 'GET /config.yaml HTTP/1.0\r\nHost: 10.0.2.2\r\nConnection: close\r\n\r\n'; sleep 5; } | nc 10.0.2.2 $SUB_PORT 2>/dev/null | head -1" | tr -d '\r' || true)
+info "  HTTP response: $HTTP_OUT"
+if echo "$HTTP_OUT" | grep -qE "HTTP/.* 200"; then
+    info "  PASS: HTTP 200"; PASS=$((PASS + 1))
 else
-    # Fallback: try the emulator host's HTTP subscription server
-    info "  Trying subscription server at 10.0.2.2:$SUB_PORT..."
-    WGET_OUT2=$("$ADB" shell "wget -q -S -O /dev/null --timeout=10 http://10.0.2.2:$SUB_PORT/config.yaml 2>&1" | tr -d '\r' || true)
-    info "  wget to sub server: $WGET_OUT2"
-    if echo "$WGET_OUT2" | grep -qE "HTTP/.* 200"; then
-        info "  PASS: HTTP 200 from subscription server"; PASS=$((PASS + 1))
+    # Fallback: try Google's generate_204 endpoint
+    info "  Trying Google generate_204..."
+    HTTP_OUT2=$("$ADB" shell "{ printf 'GET /generate_204 HTTP/1.0\r\nHost: connectivitycheck.gstatic.com\r\nConnection: close\r\n\r\n'; sleep 5; } | nc 142.251.46.228 80 2>/dev/null | head -1" | tr -d '\r' || true)
+    info "  HTTP response: $HTTP_OUT2"
+    if echo "$HTTP_OUT2" | grep -qE "HTTP/.* (200|204|301|302)"; then
+        HTTP_CODE=$(echo "$HTTP_OUT2" | grep -oE "[0-9]{3}" | head -1)
+        info "  PASS: HTTP $HTTP_CODE"; PASS=$((PASS + 1))
     else
         echo "  FAIL: HTTP requests failed"
     fi
