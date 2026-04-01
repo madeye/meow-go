@@ -347,52 +347,59 @@ screenshot "05_vpn_status"
 
 PASS=0
 TOTAL=5
+TEST_NAMES=()
+TEST_RESULTS=()
+TEST_DETAILS=()
 
 ensure_emulator
 info "  Test 1: tun0 interface..."
 TUN_CHECK=$("$ADB" shell ip addr show tun0 2>&1 || true)
+TEST_NAMES+=("TUN interface")
 if echo "$TUN_CHECK" | grep -q "inet "; then
-    info "  PASS: tun0 exists"; PASS=$((PASS + 1))
+    TEST_RESULTS+=("PASS"); TEST_DETAILS+=("tun0 up"); PASS=$((PASS + 1))
 else
-    echo "  FAIL: tun0 not found"
+    TEST_RESULTS+=("FAIL"); TEST_DETAILS+=("tun0 not found")
 fi
 
 ensure_emulator
 info "  Test 2: DNS resolution..."
 DNS_OUT=$("$ADB" shell "ping -c 1 -W 5 google.com 2>&1" || true)
+TEST_NAMES+=("DNS resolution")
 if echo "$DNS_OUT" | grep -qE "PING google\.com \([0-9]+\.[0-9]+"; then
-    info "  PASS: DNS OK"; PASS=$((PASS + 1))
+    TEST_RESULTS+=("PASS"); TEST_DETAILS+=("google.com resolved"); PASS=$((PASS + 1))
 else
-    echo "  FAIL: DNS failed"
+    TEST_RESULTS+=("FAIL"); TEST_DETAILS+=("ping google.com failed")
 fi
 
 ensure_emulator
 info "  Test 3: TCP 1.1.1.1:80..."
 NC1=$("$ADB" shell "echo '' | nc -w 5 1.1.1.1 80 >/dev/null 2>&1; echo \$?" | tr -d '\r' | tail -1)
+TEST_NAMES+=("TCP 1.1.1.1:80")
 if [[ "$NC1" == "0" ]]; then
-    info "  PASS"; PASS=$((PASS + 1))
+    TEST_RESULTS+=("PASS"); TEST_DETAILS+=("connected"); PASS=$((PASS + 1))
 else
-    echo "  FAIL (exit=$NC1)"
+    TEST_RESULTS+=("FAIL"); TEST_DETAILS+=("exit=$NC1")
 fi
 
 ensure_emulator
 info "  Test 4: TCP 8.8.8.8:443..."
 NC2=$("$ADB" shell "echo '' | nc -w 5 8.8.8.8 443 >/dev/null 2>&1; echo \$?" | tr -d '\r' | tail -1)
+TEST_NAMES+=("TCP 8.8.8.8:443")
 if [[ "$NC2" == "0" ]]; then
-    info "  PASS"; PASS=$((PASS + 1))
+    TEST_RESULTS+=("PASS"); TEST_DETAILS+=("connected"); PASS=$((PASS + 1))
 else
-    echo "  FAIL (exit=$NC2)"
+    TEST_RESULTS+=("FAIL"); TEST_DETAILS+=("exit=$NC2")
 fi
 
 ensure_emulator
 info "  Test 5: HTTP request (Google generate_204)..."
 HTTP_OUT=$("$ADB" shell "{ printf 'GET /generate_204 HTTP/1.0\r\nHost: connectivitycheck.gstatic.com\r\nConnection: close\r\n\r\n'; sleep 5; } | nc connectivitycheck.gstatic.com 80 2>/dev/null | head -1" | tr -d '\r' || true)
-info "  HTTP response: $HTTP_OUT"
+TEST_NAMES+=("HTTP generate_204")
 if echo "$HTTP_OUT" | grep -qE "HTTP/.* (200|204|301|302)"; then
     HTTP_CODE=$(echo "$HTTP_OUT" | grep -oE "[0-9]{3}" | head -1)
-    info "  PASS: HTTP $HTTP_CODE"; PASS=$((PASS + 1))
+    TEST_RESULTS+=("PASS"); TEST_DETAILS+=("HTTP $HTTP_CODE"); PASS=$((PASS + 1))
 else
-    echo "  FAIL: HTTP request failed"
+    TEST_RESULTS+=("FAIL"); TEST_DETAILS+=("no valid response")
 fi
 
 # Stop logcat collection
@@ -402,10 +409,20 @@ if [[ -n "$LOGCAT_PID" ]] && kill -0 "$LOGCAT_PID" 2>/dev/null; then
     LOGCAT_PID=""
 fi
 
+# Print results table
 echo ""
-echo "========================================"
-echo "  E2E Test Results: $PASS/$TOTAL passed"
-echo "========================================"
+echo "+-----+--------------------+--------+------------------------+"
+echo "| #   | Test               | Result | Details                |"
+echo "+-----+--------------------+--------+------------------------+"
+for i in $(seq 0 $((TOTAL - 1))); do
+    printf "| %-3s | %-18s | %-6s | %-22s |\n" \
+        "$((i + 1))" "${TEST_NAMES[$i]}" "${TEST_RESULTS[$i]}" "${TEST_DETAILS[$i]}"
+done
+echo "+-----+--------------------+--------+------------------------+"
+printf "| %-55s |\n" "$PASS/$TOTAL passed"
+echo "+-----+--------------------+--------+------------------------+"
+
+echo ""
 if [[ $PASS -eq $TOTAL ]]; then
     info "Relevant logcat (VPN/mihomo):"
     grep -iE "mihomo|meow|vpn|tun" "$LOGCAT_FILE" | tail -30 || true
