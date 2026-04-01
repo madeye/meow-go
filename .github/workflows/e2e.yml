@@ -70,7 +70,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: mobile/build/outputs/apk/debug/mobile-x86_64-debug.apk
+          path: mobile/build/outputs/apk/debug/mobile-debug.apk
           retention-days: 1
 
   test:
@@ -131,7 +131,7 @@ jobs:
         env:
           SKIP_EMULATOR_BOOT: "true"
           CURL_STATIC: /tmp/curl-x86_64
-          APK: mobile/build/outputs/apk/debug/mobile-x86_64-debug.apk
+          APK: mobile/build/outputs/apk/debug/mobile-debug.apk
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
