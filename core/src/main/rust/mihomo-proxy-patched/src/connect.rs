@@ -40,15 +40,21 @@ async fn protected_resolve(host: &str, port: u16) -> std::io::Result<SocketAddr>
     let sock = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::DGRAM, Some(socket2::Protocol::UDP))?;
     (hook)(sock.as_raw_fd());
     sock.set_nonblocking(true)?;
+
+    // Connect via socket2 before converting to tokio — ensures the protected
+    // socket routes through the underlying network, not the VPN TUN.
+    let dns_addr: std::net::SocketAddr = "8.8.8.8:53".parse().unwrap();
+    sock.connect(&socket2::SockAddr::from(dns_addr))?;
+
     let std_sock: std::net::UdpSocket = sock.into();
     let udp = tokio::net::UdpSocket::from_std(std_sock)?;
-    udp.connect("8.8.8.8:53").await?;
     udp.send(&query).await?;
 
     let mut buf = [0u8; 512];
-    let n = tokio::time::timeout(std::time::Duration::from_secs(5), udp.recv(&mut buf))
+    let recv_result = tokio::time::timeout(std::time::Duration::from_secs(5), udp.recv(&mut buf))
         .await
-        .map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, "DNS timeout"))??;
+        .map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, format!("DNS timeout for {}", host)))?;
+    let n = recv_result?;
 
     parse_dns_response(&buf[..n], port)
 }
