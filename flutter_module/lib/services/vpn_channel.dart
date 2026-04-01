@@ -68,6 +68,11 @@ class VpnChannel {
 
   Future<void> refreshAll() => _method.invokeMethod('refreshAll');
 
+  Future<List<Map<String, dynamic>>> getTrafficHistory() async {
+    final list = await _method.invokeMethod<List>('getTrafficHistory') ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
   /// Select a proxy node in all Selector groups that contain it.
   /// [yamlContent] is the profile YAML used to find group membership.
   Future<void> selectProxyNode(String nodeName, String yamlContent) async {

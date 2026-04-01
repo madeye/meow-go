@@ -7,7 +7,11 @@ import io.github.madeye.meow.aidl.MihomoConnection
 import io.github.madeye.meow.aidl.TrafficStats
 import io.github.madeye.meow.bg.BaseService
 import io.github.madeye.meow.database.ClashProfile
+import io.github.madeye.meow.database.DailyTraffic
 import io.github.madeye.meow.database.PrivateDatabase
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 import io.github.madeye.meow.subscription.SubscriptionService
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -30,6 +34,9 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
     private var trafficEventSink: EventChannel.EventSink? = null
     private val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
     private var pendingConnect = false
+    private var lastTrafficTx = 0L
+    private var lastTrafficRx = 0L
+    private val dateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -141,6 +148,13 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         }
                     }
                     "getLogs" -> result.success(emptyList<String>()) // TODO: implement log polling
+                    "getTrafficHistory" -> {
+                        val cutoff = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -31) }
+                        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                        PrivateDatabase.dailyTrafficDao.deleteBefore(fmt.format(cutoff.time))
+                        val entries = PrivateDatabase.dailyTrafficDao.getAll()
+                        result.success(entries.map { mapOf("date" to it.date, "tx" to it.tx, "rx" to it.rx) })
+                    }
                     else -> result.notImplemented()
                 }
             }
@@ -196,6 +210,11 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         this.state = state
         runOnUiThread { stateEventSink?.success(state.ordinal) }
 
+        if (state == BaseService.State.Connected) {
+            lastTrafficTx = 0L
+            lastTrafficRx = 0L
+        }
+
         if (pendingConnect && state == BaseService.State.Stopped) {
             pendingConnect = false
             startVpnWithPermission()
@@ -203,6 +222,21 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
     }
 
     override fun trafficUpdated(profileId: Long, stats: TrafficStats) {
+        // Persist daily traffic
+        val deltaTx = if (lastTrafficTx > 0) stats.txTotal - lastTrafficTx else 0L
+        val deltaRx = if (lastTrafficRx > 0) stats.rxTotal - lastTrafficRx else 0L
+        lastTrafficTx = stats.txTotal
+        lastTrafficRx = stats.rxTotal
+
+        if (deltaTx > 0 || deltaRx > 0) {
+            val today = dateFmt.format(System.currentTimeMillis())
+            val dao = PrivateDatabase.dailyTrafficDao
+            val entry = dao.getByDate(today) ?: DailyTraffic(date = today)
+            if (deltaTx > 0) entry.tx += deltaTx
+            if (deltaRx > 0) entry.rx += deltaRx
+            dao.upsert(entry)
+        }
+
         runOnUiThread {
             trafficEventSink?.success(mapOf(
                 "txRate" to stats.txRate,

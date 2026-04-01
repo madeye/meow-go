@@ -51,6 +51,11 @@ class S {
   String get sessionSummary => 'Session Summary';
   String get collectingData => 'Collecting data...';
   String get connectToSeeTraffic => 'Connect VPN to see traffic';
+  String get dataUsage => 'Data Usage';
+  String get today => 'Today';
+  String get thisMonth => 'This Month';
+  String get dailyHistory => 'Daily History (30 days)';
+  String get noHistoryData => 'No traffic history yet';
 
   // Settings
   String get settings => 'Settings';
@@ -105,7 +110,6 @@ class _Zh extends S {
   @override String refreshFailed(String err) => '刷新失败：$err';
   @override String get proxies => '个节点';
 
-  // Logs
   // Traffic
   @override String get traffic => '流量';
   @override String get currentSession => '当前会话';
@@ -114,6 +118,11 @@ class _Zh extends S {
   @override String get sessionSummary => '会话统计';
   @override String get collectingData => '正在收集数据...';
   @override String get connectToSeeTraffic => '连接 VPN 查看流量';
+  @override String get dataUsage => '流量统计';
+  @override String get today => '今日';
+  @override String get thisMonth => '本月';
+  @override String get dailyHistory => '每日流量（30 天）';
+  @override String get noHistoryData => '暂无流量记录';
 
   // Settings
   @override String get settings => '设置';

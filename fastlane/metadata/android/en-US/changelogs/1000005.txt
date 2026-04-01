@@ -1,0 +1,6 @@
+- Add daily and monthly traffic statistics
+- Interactive 30-day traffic history chart
+- Tap any day to see upload/download details
+- Traffic data persisted in local database
+- Proxy node selection via REST API
+- Show selected proxy node in app bar
