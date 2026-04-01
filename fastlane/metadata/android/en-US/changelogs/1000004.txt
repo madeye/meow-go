@@ -1,0 +1,5 @@
+- Fix VPN service startup and proxy listener
+- Add proxy node selection via REST API
+- Show selected proxy node in app bar
+- Fix disconnect functionality
+- Protected DNS resolution for proxy servers

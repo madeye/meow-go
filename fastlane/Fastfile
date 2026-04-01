@@ -26,7 +26,7 @@ platform :android do
     upload_to_play_store(
       track: "internal",
       release_status: "draft",
-      version_code: 1000003,
+      version_code: 1000004,
       skip_upload_aab: true,
       skip_upload_apk: true,
       skip_upload_images: false,
