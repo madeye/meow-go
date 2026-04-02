@@ -1,5 +1,7 @@
 # Meow
 
+![Feature Graphic](fastlane/metadata/android/en-US/images/featureGraphic.png)
+
 A Clash/mihomo Android client with Flutter UI, powered by [mihomo-rust](https://github.com/madeye/mihomo-rust) and netstack-smoltcp tun2socks.
 
 ## Architecture
