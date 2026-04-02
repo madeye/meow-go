@@ -23,6 +23,14 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 Deploy to Google Play internal testing track
 
+### android beta
+
+```sh
+[bundle exec] fastlane android beta
+```
+
+Deploy to Google Play open testing track
+
 ### android production
 
 ```sh

@@ -1,0 +1,3 @@
+- Run VPN service in separate process for better stability
+- Fix protected DNS resolution for proxy server hostnames
+- Fix connection issues when app runs in background
