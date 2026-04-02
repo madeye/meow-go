@@ -52,7 +52,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _profile = profile;
           _proxyNames = profile?.proxyNames ?? [];
           if (changed || _selectedProxy == null || !_proxyNames.contains(_selectedProxy)) {
-            _selectedProxy = _proxyNames.isNotEmpty ? _proxyNames.first : null;
+            final saved = profile?.selectedProxy ?? '';
+            if (saved.isNotEmpty && _proxyNames.contains(saved)) {
+              _selectedProxy = saved;
+            } else {
+              _selectedProxy = _proxyNames.isNotEmpty ? _proxyNames.first : null;
+            }
           }
         });
       }
@@ -209,6 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     onTap: () {
                       setState(() => _selectedProxy = name);
                       if (_profile != null) {
+                        _vpn.saveSelectedProxy(_profile!.id, name);
                         _vpn.selectProxyNode(name, _profile!.yamlContent);
                       }
                     },

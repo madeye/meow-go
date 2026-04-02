@@ -13,6 +13,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import io.github.madeye.meow.subscription.SubscriptionService
+import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
@@ -40,6 +41,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         connection.connect(this, this)
 
         if (intent?.getBooleanExtra("auto_connect", false) == true) {
@@ -111,6 +113,12 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         PrivateDatabase.profileDao.deselectAll()
                         PrivateDatabase.profileDao.select(id)
+                        result.success(null)
+                    }
+                    "saveSelectedProxy" -> {
+                        val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        val proxyName = call.argument<String>("proxyName") ?: ""
+                        PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
                         result.success(null)
                     }
                     "refreshSubscription" -> {
@@ -258,5 +266,6 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         "lastUpdated" to lastUpdated.toInt(),
         "tx" to tx.toInt(),
         "rx" to rx.toInt(),
+        "selectedProxy" to selectedProxy,
     )
 }

@@ -68,6 +68,9 @@ class VpnChannel {
 
   Future<void> refreshAll() => _method.invokeMethod('refreshAll');
 
+  Future<void> saveSelectedProxy(int profileId, String proxyName) =>
+      _method.invokeMethod('saveSelectedProxy', {'id': profileId, 'proxyName': proxyName});
+
   Future<List<Map<String, dynamic>>> getTrafficHistory() async {
     final list = await _method.invokeMethod<List>('getTrafficHistory') ?? [];
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();

@@ -5,7 +5,7 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import io.github.madeye.meow.Core
 
-@Database(entities = [ClashProfile::class, DailyTraffic::class], version = 2)
+@Database(entities = [ClashProfile::class, DailyTraffic::class], version = 3)
 abstract class PrivateDatabase : RoomDatabase() {
     companion object {
         private val instance by lazy {

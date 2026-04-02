@@ -7,6 +7,7 @@ class ClashProfile {
   int lastUpdated;
   int tx;
   int rx;
+  String selectedProxy;
 
   ClashProfile({
     this.id = 0,
@@ -17,6 +18,7 @@ class ClashProfile {
     this.lastUpdated = 0,
     this.tx = 0,
     this.rx = 0,
+    this.selectedProxy = '',
   });
 
   factory ClashProfile.fromMap(Map<dynamic, dynamic> map) => ClashProfile(
@@ -28,6 +30,7 @@ class ClashProfile {
         lastUpdated: map['lastUpdated'] as int? ?? 0,
         tx: map['tx'] as int? ?? 0,
         rx: map['rx'] as int? ?? 0,
+        selectedProxy: map['selectedProxy'] as String? ?? '',
       );
 
   Map<String, dynamic> toMap() => {
@@ -39,6 +42,7 @@ class ClashProfile {
         'lastUpdated': lastUpdated,
         'tx': tx,
         'rx': rx,
+        'selectedProxy': selectedProxy,
       };
 
   /// Parse proxy names from the YAML content

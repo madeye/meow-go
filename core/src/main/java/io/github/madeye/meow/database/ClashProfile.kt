@@ -12,6 +12,7 @@ data class ClashProfile(
     @ColumnInfo(name = "last_updated") var lastUpdated: Long = 0,
     var tx: Long = 0,
     var rx: Long = 0,
+    @ColumnInfo(name = "selected_proxy") var selectedProxy: String = "",
 )
 
 @Dao
@@ -42,4 +43,7 @@ interface ProfileDao {
 
     @Query("UPDATE clash_profile SET tx = :tx, rx = :rx WHERE id = :id")
     fun updateTraffic(id: Long, tx: Long, rx: Long)
+
+    @Query("UPDATE clash_profile SET selected_proxy = :proxyName WHERE id = :id")
+    fun updateSelectedProxy(id: Long, proxyName: String)
 }
