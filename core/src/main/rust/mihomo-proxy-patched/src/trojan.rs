@@ -1,3 +1,4 @@
+use crate::connect::protected_tcp_connect;
 use async_trait::async_trait;
 use mihomo_common::{
     AdapterType, Metadata, MihomoError, ProxyAdapter, ProxyConn, ProxyPacketConn, Result,
@@ -5,7 +6,6 @@ use mihomo_common::{
 use rustls::pki_types::ServerName;
 use sha2::{Digest, Sha224};
 use std::sync::Arc;
-use crate::connect::protected_tcp_connect;
 use tokio::io::AsyncWriteExt;
 use tokio_rustls::TlsConnector;
 use tracing::debug;

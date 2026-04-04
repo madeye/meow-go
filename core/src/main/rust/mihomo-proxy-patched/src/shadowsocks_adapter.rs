@@ -1,5 +1,5 @@
-use async_trait::async_trait;
 use crate::connect::protected_tcp_connect;
+use async_trait::async_trait;
 use mihomo_common::{
     AdapterType, Metadata, MihomoError, ProxyAdapter, ProxyConn, ProxyPacketConn, Result,
 };

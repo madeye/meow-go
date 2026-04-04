@@ -28,7 +28,13 @@ pub fn dns_table_insert(ip: IpAddr, hostname: String, ttl_secs: u32) {
     let ttl = ttl_secs.clamp(MIN_TTL_SECS, MAX_TTL_SECS);
     let expires_at = Instant::now() + std::time::Duration::from_secs(ttl as u64);
     let mut table = DNS_TABLE.lock();
-    table.insert(ip, DnsEntry { hostname, expires_at });
+    table.insert(
+        ip,
+        DnsEntry {
+            hostname,
+            expires_at,
+        },
+    );
     if table.len() > EVICTION_THRESHOLD {
         let now = Instant::now();
         table.retain(|_, e| e.expires_at > now);

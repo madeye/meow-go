@@ -1,8 +1,8 @@
+use crate::connect::protected_tcp_connect;
 use async_trait::async_trait;
 use mihomo_common::{
     AdapterType, Metadata, MihomoError, ProxyAdapter, ProxyConn, ProxyPacketConn, Result,
 };
-use crate::connect::protected_tcp_connect;
 use std::net::SocketAddr;
 use tokio::net::{TcpStream, UdpSocket};
 
@@ -102,7 +102,9 @@ impl ProxyAdapter for DirectAdapter {
 
     async fn dial_tcp(&self, metadata: &Metadata) -> Result<Box<dyn ProxyConn>> {
         let addr = metadata.remote_address();
-        let stream = protected_tcp_connect(&addr).await.map_err(MihomoError::Io)?;
+        let stream = protected_tcp_connect(&addr)
+            .await
+            .map_err(MihomoError::Io)?;
         Ok(Box::new(DirectConn(stream)))
     }
 

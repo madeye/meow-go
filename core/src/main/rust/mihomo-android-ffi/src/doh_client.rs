@@ -8,10 +8,7 @@ use tracing::{info, warn};
 
 const DOH_TIMEOUT_SECS: u64 = 5;
 
-const IP_BASED_DOH_URLS: &[&str] = &[
-    "https://1.1.1.1/dns-query",
-    "https://8.8.8.8/dns-query",
-];
+const IP_BASED_DOH_URLS: &[&str] = &["https://1.1.1.1/dns-query", "https://8.8.8.8/dns-query"];
 
 struct DohClient {
     http_client: reqwest::Client,
@@ -24,7 +21,10 @@ pub fn init_doh_client(socks_port: u16) {
     DOH_CLIENT.get_or_init(|| {
         let doh_urls = read_doh_urls_from_config();
 
-        info!("DoH client: urls={:?}, proxy=socks5h://127.0.0.1:{}", doh_urls, socks_port);
+        info!(
+            "DoH client: urls={:?}, proxy=socks5h://127.0.0.1:{}",
+            doh_urls, socks_port
+        );
 
         let proxy = reqwest::Proxy::all(format!("socks5h://127.0.0.1:{}", socks_port))
             .expect("invalid proxy URL");
@@ -36,7 +36,10 @@ pub fn init_doh_client(socks_port: u16) {
             .build()
             .expect("failed to build reqwest client");
 
-        DohClient { http_client, doh_urls }
+        DohClient {
+            http_client,
+            doh_urls,
+        }
     });
 }
 
