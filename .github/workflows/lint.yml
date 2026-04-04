@@ -108,7 +108,7 @@ jobs:
 
       - name: Rustfmt
         working-directory: core/src/main/rust/mihomo-android-ffi
-        run: cargo fmt --check
+        run: cargo fmt --all --check
 
   flutter-lint:
     runs-on: ubuntu-latest

@@ -72,6 +72,10 @@ class S {
   String get sourceCode => 'Source Code';
   String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
 
+  // Logs
+  String get logs => 'Logs';
+  String get noLogs => 'No logs yet';
+
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
   String get perAppProxyDesc => 'Select which apps use the VPN';
@@ -151,6 +155,10 @@ class _Zh extends S {
   @override String get about => '关于';
   @override String get sourceCode => '源代码';
   @override String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+
+  // Logs
+  @override String get logs => '日志';
+  @override String get noLogs => '暂无日志';
 
   // Per-App Proxy
   @override String get perAppProxy => '分应用代理';

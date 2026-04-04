@@ -126,7 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Switch(
                   value: isOn,
                   onChanged: _state.canToggle ? _toggle : null,
-                  activeColor: Colors.greenAccent,
+                  activeTrackColor: Colors.greenAccent,
                 ),
             ],
           ),

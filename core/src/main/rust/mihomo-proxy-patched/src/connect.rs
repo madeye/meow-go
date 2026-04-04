@@ -37,7 +37,11 @@ async fn protected_resolve(host: &str, port: u16) -> std::io::Result<SocketAddr>
     let query = build_dns_query(host);
 
     // Send via a protected UDP socket to 8.8.8.8:53
-    let sock = socket2::Socket::new(socket2::Domain::IPV4, socket2::Type::DGRAM, Some(socket2::Protocol::UDP))?;
+    let sock = socket2::Socket::new(
+        socket2::Domain::IPV4,
+        socket2::Type::DGRAM,
+        Some(socket2::Protocol::UDP),
+    )?;
     (hook)(sock.as_raw_fd());
     sock.set_nonblocking(true)?;
 
@@ -53,7 +57,12 @@ async fn protected_resolve(host: &str, port: u16) -> std::io::Result<SocketAddr>
     let mut buf = [0u8; 512];
     let recv_result = tokio::time::timeout(std::time::Duration::from_secs(5), udp.recv(&mut buf))
         .await
-        .map_err(|_| std::io::Error::new(std::io::ErrorKind::TimedOut, format!("DNS timeout for {}", host)))?;
+        .map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::TimedOut,
+                format!("DNS timeout for {}", host),
+            )
+        })?;
     let n = recv_result?;
 
     parse_dns_response(&buf[..n], port)
@@ -72,7 +81,7 @@ fn build_dns_query(host: &str) -> Vec<u8> {
         buf.extend_from_slice(label.as_bytes());
     }
     buf.push(0x00); // root label
-    // QTYPE=A (1), QCLASS=IN (1)
+                    // QTYPE=A (1), QCLASS=IN (1)
     buf.extend_from_slice(&[0x00, 0x01, 0x00, 0x01]);
     buf
 }
@@ -80,11 +89,17 @@ fn build_dns_query(host: &str) -> Vec<u8> {
 /// Parse a DNS response and extract the first A record.
 fn parse_dns_response(data: &[u8], port: u16) -> std::io::Result<SocketAddr> {
     if data.len() < 12 {
-        return Err(std::io::Error::new(std::io::ErrorKind::InvalidData, "DNS response too short"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            "DNS response too short",
+        ));
     }
     let ancount = u16::from_be_bytes([data[6], data[7]]) as usize;
     if ancount == 0 {
-        return Err(std::io::Error::new(std::io::ErrorKind::AddrNotAvailable, "no DNS answers"));
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::AddrNotAvailable,
+            "no DNS answers",
+        ));
     }
 
     // Skip header (12 bytes) and question section
@@ -92,38 +107,55 @@ fn parse_dns_response(data: &[u8], port: u16) -> std::io::Result<SocketAddr> {
     // Skip QNAME
     while pos < data.len() {
         let len = data[pos] as usize;
-        if len == 0 { pos += 1; break; }
-        if len >= 0xC0 { pos += 2; break; } // compression pointer
+        if len == 0 {
+            pos += 1;
+            break;
+        }
+        if len >= 0xC0 {
+            pos += 2;
+            break;
+        } // compression pointer
         pos += 1 + len;
     }
     pos += 4; // skip QTYPE + QCLASS
 
     // Parse answer records
     for _ in 0..ancount {
-        if pos >= data.len() { break; }
+        if pos >= data.len() {
+            break;
+        }
         // Skip NAME (may be compressed)
         if data[pos] & 0xC0 == 0xC0 {
             pos += 2;
         } else {
             while pos < data.len() {
                 let len = data[pos] as usize;
-                if len == 0 { pos += 1; break; }
+                if len == 0 {
+                    pos += 1;
+                    break;
+                }
                 pos += 1 + len;
             }
         }
-        if pos + 10 > data.len() { break; }
+        if pos + 10 > data.len() {
+            break;
+        }
         let rtype = u16::from_be_bytes([data[pos], data[pos + 1]]);
         let rdlength = u16::from_be_bytes([data[pos + 8], data[pos + 9]]) as usize;
         pos += 10;
         if rtype == 1 && rdlength == 4 && pos + 4 <= data.len() {
             // A record
-            let ip = std::net::Ipv4Addr::new(data[pos], data[pos + 1], data[pos + 2], data[pos + 3]);
+            let ip =
+                std::net::Ipv4Addr::new(data[pos], data[pos + 1], data[pos + 2], data[pos + 3]);
             return Ok(SocketAddr::new(std::net::IpAddr::V4(ip), port));
         }
         pos += rdlength;
     }
 
-    Err(std::io::Error::new(std::io::ErrorKind::AddrNotAvailable, "no A record in DNS response"))
+    Err(std::io::Error::new(
+        std::io::ErrorKind::AddrNotAvailable,
+        "no A record in DNS response",
+    ))
 }
 
 /// Connect a TCP stream, calling the protect hook before connect() if set.
@@ -139,10 +171,12 @@ pub async fn protected_tcp_connect(addr: &str) -> std::io::Result<TcpStream> {
         Ok(a) => a,
         Err(_) => {
             // Parse host:port
-            let (host, port) = addr.rsplit_once(':')
-                .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid addr"))?;
-            let port: u16 = port.parse()
-                .map_err(|_| std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid port"))?;
+            let (host, port) = addr.rsplit_once(':').ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid addr")
+            })?;
+            let port: u16 = port.parse().map_err(|_| {
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "invalid port")
+            })?;
             protected_resolve(host, port).await?
         }
     };

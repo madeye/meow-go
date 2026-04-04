@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../l10n/strings.dart';
 import '../services/vpn_channel.dart';
