@@ -194,7 +194,7 @@ SUB_YAML=$(cat /tmp/test-sub/config.yaml)
 rm -f /tmp/mihomo.db /tmp/mihomo.db-wal /tmp/mihomo.db-shm
 sqlite3 /tmp/mihomo.db <<DBEOF
 CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT);
-INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42,'7f1239e0c92bebb6bf8dc11159ea06e5');
+INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42,'be2bb5a07255600b6fb3c0ab8f8511a3');
 CREATE TABLE IF NOT EXISTS clash_profile (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL,
@@ -203,7 +203,8 @@ CREATE TABLE IF NOT EXISTS clash_profile (
     selected INTEGER NOT NULL,
     last_updated INTEGER NOT NULL,
     tx INTEGER NOT NULL,
-    rx INTEGER NOT NULL
+    rx INTEGER NOT NULL,
+    selected_proxy TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS daily_traffic (
     date TEXT NOT NULL,
