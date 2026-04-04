@@ -1,0 +1,132 @@
+name: Lint
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  android-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Decode google-services.json
+        if: env.GOOGLE_SERVICES_JSON != ''
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" | base64 -d > mobile/google-services.json
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        run: cd flutter_module && flutter pub get
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-linux-android
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            ~/.cargo/bin/cargo-ndk
+            core/src/main/rust/mihomo-android-ffi/target
+          key: cargo-lint-${{ runner.os }}-${{ hashFiles('core/src/main/rust/**/Cargo.lock') }}
+          restore-keys: cargo-lint-${{ runner.os }}-
+
+      - name: Install Android NDK
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;28.2.13676358" "ndk;27.0.12077973"
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+
+      - name: Install cargo-ndk
+        run: command -v cargo-ndk || cargo install cargo-ndk
+
+      - name: Gradle cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-lint-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: gradle-lint-${{ runner.os }}-
+
+      - name: Android Lint
+        run: ./gradlew :mobile:lintDebug -PTARGET_ABI=x86_64 -PCARGO_PROFILE=debug
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: mobile/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+
+  rust-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Cargo cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            core/src/main/rust/mihomo-android-ffi/target
+          key: cargo-clippy-${{ runner.os }}-${{ hashFiles('core/src/main/rust/**/Cargo.lock') }}
+          restore-keys: cargo-clippy-${{ runner.os }}-
+
+      - name: Clippy
+        working-directory: core/src/main/rust/mihomo-android-ffi
+        run: cargo clippy -- -D warnings
+
+      - name: Rustfmt
+        working-directory: core/src/main/rust/mihomo-android-ffi
+        run: cargo fmt --check
+
+  flutter-lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter pub get
+        working-directory: flutter_module
+        run: flutter pub get
+
+      - name: Flutter analyze
+        working-directory: flutter_module
+        run: flutter analyze

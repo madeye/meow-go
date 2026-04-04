@@ -31,6 +31,26 @@ SKIP_EMULATOR_BOOT=true ./test-e2e.sh
 
 **JDK 17 is required** — JDK 25 breaks Kotlin compiler. Set `JAVA_HOME` explicitly.
 
+## Lint Commands
+
+**You MUST run the relevant lint commands before considering any code change complete.** Fix all lint errors before committing.
+
+```bash
+# Android lint (Kotlin)
+./gradlew :mobile:lintDebug -PTARGET_ABI=arm64 -PCARGO_PROFILE=release
+
+# Rust clippy (from repo root)
+cd core/src/main/rust/mihomo-android-ffi && cargo clippy -- -D warnings && cd -
+
+# Rust format check
+cd core/src/main/rust/mihomo-android-ffi && cargo fmt --check && cd -
+
+# Flutter analyze
+cd flutter_module && flutter analyze && cd -
+```
+
+Run Android lint after Kotlin changes, clippy/rustfmt after Rust changes, and flutter analyze after Dart changes.
+
 ## Architecture
 
 Three-layer stack: **Flutter UI → Kotlin VPN Service → Rust FFI**

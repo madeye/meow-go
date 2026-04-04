@@ -38,6 +38,9 @@ fun Project.setupCommon() {
             warning += "ImpliedQuantity"
             informational += "MissingQuantity"
             informational += "MissingTranslation"
+            informational += "QueryAllPackagesPermission"
+            abortOnError = true
+            warningsAsErrors = false
         }
     }
     extensions.getByName<KotlinAndroidProjectExtension>("kotlin").compilerOptions.jvmTarget

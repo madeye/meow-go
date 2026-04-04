@@ -44,7 +44,7 @@ pub(crate) static HOME_DIR: Mutex<Option<String>> = Mutex::new(None);
 // ---------------------------------------------------------------------------
 
 thread_local! {
-    static LAST_ERROR: std::cell::RefCell<String> = std::cell::RefCell::new(String::new());
+    static LAST_ERROR: std::cell::RefCell<String> = const { std::cell::RefCell::new(String::new()) };
 }
 
 fn set_error(msg: String) {
@@ -76,10 +76,7 @@ rules:\n\
 // Engine lifecycle
 // ---------------------------------------------------------------------------
 
-fn start_engine(
-    external_controller: Option<String>,
-    secret: Option<String>,
-) -> i32 {
+fn start_engine(external_controller: Option<String>, secret: Option<String>) -> i32 {
     logging::bridge_log("start_engine: acquiring ENGINE lock");
     let mut engine = ENGINE.lock();
     if engine.is_some() {
@@ -115,7 +112,10 @@ async fn start_engine_async(
         match std::fs::read_to_string(&path) {
             Ok(s) => s,
             Err(e) => {
-                logging::bridge_log(&format!("start_engine_async: failed to read {}: {}, using minimal", path, e));
+                logging::bridge_log(&format!(
+                    "start_engine_async: failed to read {}: {}, using minimal",
+                    path, e
+                ));
                 MINIMAL_CONFIG.to_string()
             }
         }
@@ -204,7 +204,11 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeSetHomeD
 ) {
     let dir_str: String = env.get_string(&dir).map(|s| s.into()).unwrap_or_default();
     logging::bridge_log(&format!("nativeSetHomeDir: {}", dir_str));
-    *HOME_DIR.lock() = if dir_str.is_empty() { None } else { Some(dir_str) };
+    *HOME_DIR.lock() = if dir_str.is_empty() {
+        None
+    } else {
+        Some(dir_str)
+    };
 }
 
 #[no_mangle]
@@ -215,7 +219,10 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeStartEng
     secret: JString,
 ) -> jint {
     let addr_str: String = env.get_string(&addr).map(|s| s.into()).unwrap_or_default();
-    let secret_str: String = env.get_string(&secret).map(|s| s.into()).unwrap_or_default();
+    let secret_str: String = env
+        .get_string(&secret)
+        .map(|s| s.into())
+        .unwrap_or_default();
     start_engine(Some(addr_str), Some(secret_str))
 }
 
@@ -277,7 +284,11 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeIsRunnin
     _env: JNIEnv,
     _class: JClass,
 ) -> jboolean {
-    if ENGINE.lock().is_some() { JNI_TRUE } else { JNI_FALSE }
+    if ENGINE.lock().is_some() {
+        JNI_TRUE
+    } else {
+        JNI_FALSE
+    }
 }
 
 #[no_mangle]
@@ -322,7 +333,7 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeValidate
 
 #[no_mangle]
 pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeGetLastError(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
 ) -> jstring {
     let msg = get_error();
@@ -333,7 +344,7 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeGetLastE
 
 #[no_mangle]
 pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeVersion(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
 ) -> jstring {
     env.new_string("mihomo-rust 0.2.0")

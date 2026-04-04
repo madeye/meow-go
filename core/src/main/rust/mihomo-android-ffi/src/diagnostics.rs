@@ -1,6 +1,6 @@
-use jni::JNIEnv;
 use jni::objects::JClass;
 use jni::sys::jstring;
+use jni::JNIEnv;
 use std::io::{Read, Write};
 use std::net::{TcpStream, UdpSocket};
 use std::time::{Duration, Instant};
@@ -22,12 +22,17 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeTestDire
     let addr = format!("{}:{}", host_str, port);
     let start = Instant::now();
     match TcpStream::connect_timeout(
-        &addr.parse().unwrap_or_else(|_| "0.0.0.0:0".parse().unwrap()),
+        &addr
+            .parse()
+            .unwrap_or_else(|_| "0.0.0.0:0".parse().unwrap()),
         Duration::from_secs(5),
     ) {
         Ok(_) => {
             let elapsed = start.elapsed();
-            result_to_jstring(&mut env, &format!("OK: connected to {} in {:?}", addr, elapsed))
+            result_to_jstring(
+                &mut env,
+                &format!("OK: connected to {} in {:?}", addr, elapsed),
+            )
         }
         Err(e) => {
             let elapsed = start.elapsed();
@@ -44,13 +49,11 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeTestProx
 ) -> jstring {
     let target_url: String = env.get_string(&url).map(|s| s.into()).unwrap_or_default();
     let proxy_addr = "127.0.0.1:7890";
-    let conn = match TcpStream::connect_timeout(
-        &proxy_addr.parse().unwrap(),
-        Duration::from_secs(5),
-    ) {
-        Ok(c) => c,
-        Err(e) => return result_to_jstring(&mut env, &format!("FAIL proxy connect: {}", e)),
-    };
+    let conn =
+        match TcpStream::connect_timeout(&proxy_addr.parse().unwrap(), Duration::from_secs(5)) {
+            Ok(c) => c,
+            Err(e) => return result_to_jstring(&mut env, &format!("FAIL proxy connect: {}", e)),
+        };
     let _ = conn.set_read_timeout(Some(Duration::from_secs(10)));
     let _ = conn.set_write_timeout(Some(Duration::from_secs(10)));
 
@@ -80,7 +83,10 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeTestDnsR
     _class: JClass,
     dns_addr: jni::objects::JString,
 ) -> jstring {
-    let addr_str: String = env.get_string(&dns_addr).map(|s| s.into()).unwrap_or_default();
+    let addr_str: String = env
+        .get_string(&dns_addr)
+        .map(|s| s.into())
+        .unwrap_or_default();
     let sock = match UdpSocket::bind("0.0.0.0:0") {
         Ok(s) => s,
         Err(e) => return result_to_jstring(&mut env, &format!("DNS-TEST: FAIL bind: {}", e)),
@@ -88,7 +94,10 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeTestDnsR
     let _ = sock.set_read_timeout(Some(Duration::from_secs(5)));
 
     if let Err(e) = sock.connect(&addr_str) {
-        return result_to_jstring(&mut env, &format!("DNS-TEST: FAIL connect to {}: {}", addr_str, e));
+        return result_to_jstring(
+            &mut env,
+            &format!("DNS-TEST: FAIL connect to {}: {}", addr_str, e),
+        );
     }
 
     let query = build_dns_query("www.baidu.com");
@@ -111,7 +120,9 @@ pub extern "system" fn Java_io_github_madeye_meow_core_MihomoCore_nativeTestDnsR
 
 fn build_dns_query(domain: &str) -> Vec<u8> {
     let mut buf = Vec::with_capacity(64);
-    buf.extend_from_slice(&[0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    buf.extend_from_slice(&[
+        0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ]);
     for label in domain.split('.') {
         buf.push(label.len() as u8);
         buf.extend_from_slice(label.as_bytes());
@@ -131,8 +142,13 @@ fn parse_dns_response_a(msg: &[u8]) -> Option<String> {
         while pos < msg.len() {
             let l = msg[pos] as usize;
             pos += 1;
-            if l == 0 { break; }
-            if l >= 0xC0 { pos += 1; break; }
+            if l == 0 {
+                break;
+            }
+            if l >= 0xC0 {
+                pos += 1;
+                break;
+            }
             pos += l;
         }
         pos += 4;
@@ -145,16 +161,26 @@ fn parse_dns_response_a(msg: &[u8]) -> Option<String> {
             while pos < msg.len() {
                 let l = msg[pos] as usize;
                 pos += 1;
-                if l == 0 { break; }
+                if l == 0 {
+                    break;
+                }
                 pos += l;
             }
         }
-        if pos + 10 > msg.len() { break; }
+        if pos + 10 > msg.len() {
+            break;
+        }
         let rtype = (msg[pos] as usize) << 8 | msg[pos + 1] as usize;
         let rdlen = (msg[pos + 8] as usize) << 8 | msg[pos + 9] as usize;
         pos += 10;
         if rtype == 1 && rdlen == 4 && pos + 4 <= msg.len() {
-            return Some(format!("{}.{}.{}.{}", msg[pos], msg[pos + 1], msg[pos + 2], msg[pos + 3]));
+            return Some(format!(
+                "{}.{}.{}.{}",
+                msg[pos],
+                msg[pos + 1],
+                msg[pos + 2],
+                msg[pos + 3]
+            ));
         }
         pos += rdlen;
     }

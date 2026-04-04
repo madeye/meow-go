@@ -140,12 +140,11 @@ async fn run_tun2socks(fd: RawFd, socks_addr: SocketAddr) -> io::Result<()> {
         while let Some(pkt) = egress_rx.recv().await {
             let mut retries = 0u32;
             loop {
-                let written =
-                    unsafe { libc::write(fd, pkt.as_ptr() as *const c_void, pkt.len()) };
+                let written = unsafe { libc::write(fd, pkt.as_ptr() as *const c_void, pkt.len()) };
                 if written >= 0 {
                     break;
                 }
-                let errno = unsafe { *libc::__errno() };
+                let errno = std::io::Error::last_os_error().raw_os_error().unwrap_or(0);
                 if errno == libc::EAGAIN && retries < 3 {
                     retries += 1;
                     tokio::task::yield_now().await;
@@ -160,9 +159,8 @@ async fn run_tun2socks(fd: RawFd, socks_addr: SocketAddr) -> io::Result<()> {
     let udp_reply_tx = egress_tx.clone();
     let tun_reader_handle = tokio::spawn(async move {
         let mut read_buf = vec![0u8; 65535];
-        let mut pkt_total: u64 = 0;
-        let mut pkt_udp: u64 = 0;
-        let mut last_stats = std::time::Instant::now();
+        let mut _pkt_total: u64 = 0;
+        let mut _pkt_udp: u64 = 0;
 
         loop {
             if !TUN2SOCKS_RUNNING.load(Ordering::SeqCst) {
@@ -174,15 +172,14 @@ async fn run_tun2socks(fd: RawFd, socks_addr: SocketAddr) -> io::Result<()> {
 
             let mut did_work = false;
             loop {
-                let n = unsafe {
-                    libc::read(fd, read_buf.as_mut_ptr() as *mut c_void, read_buf.len())
-                };
+                let n =
+                    unsafe { libc::read(fd, read_buf.as_mut_ptr() as *mut c_void, read_buf.len()) };
                 if n <= 0 {
                     break;
                 }
                 did_work = true;
                 let n = n as usize;
-                pkt_total += 1;
+                _pkt_total += 1;
                 let ip_data = &read_buf[..n];
 
                 // Intercept UDP DNS
@@ -190,14 +187,12 @@ async fn run_tun2socks(fd: RawFd, socks_addr: SocketAddr) -> io::Result<()> {
                     parse_udp_packet(ip_data)
                 {
                     if dst_port == 53 {
-                        pkt_udp += 1;
+                        _pkt_udp += 1;
                         let reply_tx = udp_reply_tx.clone();
                         let query = payload.to_vec();
                         tokio::spawn(async move {
-                            handle_dns_query(
-                                src_ip, src_port, dst_ip, dst_port, query, reply_tx,
-                            )
-                            .await;
+                            handle_dns_query(src_ip, src_port, dst_ip, dst_port, query, reply_tx)
+                                .await;
                         });
                         continue;
                     }
@@ -253,10 +248,7 @@ async fn handle_tcp_stream(
         SocksTarget::Domain(h, p) => format!("{}:{}", h, p),
         SocksTarget::Ip(a) => format!("{}", a),
     };
-    logging::bridge_log(&format!(
-        "SOCKS5 connect: {} -> {}",
-        src_addr, target_desc
-    ));
+    logging::bridge_log(&format!("SOCKS5 connect: {} -> {}", src_addr, target_desc));
 
     let mut socks_stream = match socks5_connect(socks_addr, target).await {
         Ok(s) => s,
@@ -271,10 +263,7 @@ async fn handle_tcp_stream(
 
     match tokio::io::copy_bidirectional(&mut tun_stream, &mut socks_stream).await {
         Ok((up, down)) => {
-            debug!(
-                "TCP relay done: {} up={} down={}",
-                dst_addr, up, down
-            );
+            debug!("TCP relay done: {} up={} down={}", dst_addr, up, down);
         }
         Err(e) => {
             debug!("TCP relay error: {} err={}", dst_addr, e);
@@ -298,7 +287,7 @@ async fn socks5_connect(proxy: SocketAddr, target: SocksTarget) -> io::Result<Tc
     let mut resp = [0u8; 2];
     stream.read_exact(&mut resp).await?;
     if resp[0] != 0x05 || resp[1] != 0x00 {
-        return Err(io::Error::new(io::ErrorKind::Other, "SOCKS5 auth failed"));
+        return Err(io::Error::other("SOCKS5 auth failed"));
     }
 
     match &target {
@@ -332,10 +321,10 @@ async fn socks5_connect(proxy: SocketAddr, target: SocksTarget) -> io::Result<Tc
     let mut rh = [0u8; 4];
     stream.read_exact(&mut rh).await?;
     if rh[0] != 0x05 || rh[1] != 0x00 {
-        return Err(io::Error::new(
-            io::ErrorKind::Other,
-            format!("SOCKS5 CONNECT failed: rep={}", rh[1]),
-        ));
+        return Err(io::Error::other(format!(
+            "SOCKS5 CONNECT failed: rep={}",
+            rh[1]
+        )));
     }
     match rh[3] {
         0x01 => {
