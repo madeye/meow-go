@@ -121,6 +121,10 @@ jobs:
           disable-animations: true
           script: echo "Generated AVD snapshot for caching."
 
+      - name: Install emulator & system image
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "emulator" "system-images;android-35;google_apis;x86_64" "platforms;android-35"
+
       - name: Start emulator
         run: |
           nohup $ANDROID_HOME/emulator/emulator -avd test -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save &
@@ -130,6 +134,10 @@ jobs:
             if [ "$($ANDROID_HOME/platform-tools/adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
               echo "Emulator booted"
               break
+            fi
+            if [ "$i" = "120" ]; then
+              echo "::error::Emulator failed to boot within 120s"
+              exit 1
             fi
             sleep 1
           done
