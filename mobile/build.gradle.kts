@@ -4,6 +4,8 @@ import java.util.Properties
 plugins {
     id("com.android.application")
     kotlin("android")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
 }
 
 setupApp()
@@ -46,4 +48,8 @@ android {
 dependencies {
     coreLibraryDesugaring(libs.desugar)
     implementation(project(":flutter"))
+
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.crashlytics)
 }

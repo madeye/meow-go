@@ -13,6 +13,8 @@ buildscript {
         classpath(libs.android.gradle)
         classpath(libs.kotlin.gradle)
         classpath(libs.rust.android)
+        classpath(libs.google.services)
+        classpath(libs.firebase.crashlytics.gradle)
     }
 }
 
