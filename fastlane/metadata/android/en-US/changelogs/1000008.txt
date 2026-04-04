@@ -1,0 +1,2 @@
+- Add per-app VPN proxy/bypass selector
+- Select which apps route through or bypass the VPN
