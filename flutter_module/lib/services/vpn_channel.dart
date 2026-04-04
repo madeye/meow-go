@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/services.dart';
 import '../models/profile.dart';
 import '../models/vpn_state.dart';
@@ -75,6 +76,26 @@ class VpnChannel {
     final list = await _method.invokeMethod<List>('getTrafficHistory') ?? [];
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
   }
+
+  Future<List<Map<String, dynamic>>> getInstalledApps() async {
+    final list = await _method.invokeMethod<List>('getInstalledApps') ?? [];
+    return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+  }
+
+  Future<Uint8List?> getAppIcon(String packageName) async {
+    return await _method.invokeMethod<Uint8List>('getAppIcon', {'packageName': packageName});
+  }
+
+  Future<Map<String, dynamic>> getPerAppConfig() async {
+    final map = await _method.invokeMethod<Map>('getPerAppConfig') ?? {};
+    return Map<String, dynamic>.from(map);
+  }
+
+  Future<void> setPerAppConfig(String mode, List<String> packages) =>
+      _method.invokeMethod('setPerAppConfig', {
+        'mode': mode,
+        'packages': json.encode(packages),
+      });
 
   /// Select a proxy node in all Selector groups that contain it.
   /// [yamlContent] is the profile YAML used to find group membership.

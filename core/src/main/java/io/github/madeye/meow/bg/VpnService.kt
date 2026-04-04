@@ -7,6 +7,8 @@ import android.os.Build
 import android.os.ParcelFileDescriptor
 import io.github.madeye.meow.Core
 import io.github.madeye.meow.net.DefaultNetworkListener
+import io.github.madeye.meow.preference.DataStore
+import org.json.JSONArray
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -79,11 +81,36 @@ class VpnService : BaseVpnService(), BaseService.Interface {
             .addRoute("0.0.0.0", 0)
             .addRoute("::", 0)
 
-        // Per-socket VpnService.protect() via JNI callback handles proxy outbound.
-        // Also exclude our own app as a safety net.
-        try {
-            builder.addDisallowedApplication(packageName)
-        } catch (_: PackageManager.NameNotFoundException) { }
+        // Per-app VPN routing
+        val perAppPackages: Set<String> = try {
+            JSONArray(DataStore.perAppPackages).let { arr ->
+                (0 until arr.length()).map { arr.getString(it) }.toSet()
+            }
+        } catch (_: Exception) { emptySet() }
+
+        if (perAppPackages.isEmpty()) {
+            // Feature disabled — exclude self only (default behavior)
+            try { builder.addDisallowedApplication(packageName) }
+            catch (_: PackageManager.NameNotFoundException) { }
+        } else when (DataStore.perAppMode) {
+            "proxy" -> {
+                // Only selected apps go through VPN (cannot mix with addDisallowedApplication)
+                for (pkg in perAppPackages) {
+                    if (pkg == packageName) continue
+                    try { builder.addAllowedApplication(pkg) }
+                    catch (_: PackageManager.NameNotFoundException) { }
+                }
+            }
+            else -> {
+                // "bypass" — all apps except selected + self
+                try { builder.addDisallowedApplication(packageName) }
+                catch (_: PackageManager.NameNotFoundException) { }
+                for (pkg in perAppPackages) {
+                    try { builder.addDisallowedApplication(pkg) }
+                    catch (_: PackageManager.NameNotFoundException) { }
+                }
+            }
+        }
 
         active = true
         if (Build.VERSION.SDK_INT >= 29) builder.setMetered(metered)

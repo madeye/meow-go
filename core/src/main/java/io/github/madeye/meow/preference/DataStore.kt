@@ -17,4 +17,12 @@ object DataStore {
     var portLocalDns: Int
         get() = prefs.getInt("portLocalDns", 1053)
         set(value) = prefs.edit().putInt("portLocalDns", value).apply()
+
+    var perAppMode: String
+        get() = prefs.getString("perAppMode", "proxy") ?: "proxy"
+        set(value) = prefs.edit().putString("perAppMode", value).apply()
+
+    var perAppPackages: String
+        get() = prefs.getString("perAppPackages", "[]") ?: "[]"
+        set(value) = prefs.edit().putString("perAppPackages", value).apply()
 }

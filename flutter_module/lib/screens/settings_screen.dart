@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../l10n/strings.dart';
+import 'per_app_proxy_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -21,6 +22,16 @@ class SettingsScreen extends StatelessWidget {
             subtitle: FutureBuilder<String?>(
               future: _method.invokeMethod<String>('getVersion'),
               builder: (_, snap) => Text(snap.data ?? 'Loading...'),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.apps),
+            title: Text(s.perAppProxy),
+            subtitle: Text(s.perAppProxyDesc),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const PerAppProxyScreen()),
             ),
           ),
           _SectionHeader(s.network),

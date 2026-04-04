@@ -71,6 +71,19 @@ class S {
   String get about => 'About';
   String get sourceCode => 'Source Code';
   String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+
+  // Per-App Proxy
+  String get perAppProxy => 'Per-App Proxy';
+  String get perAppProxyDesc => 'Select which apps use the VPN';
+  String get perAppModeProxy => 'Proxy Selected';
+  String get perAppModeBypass => 'Bypass Selected';
+  String get perAppSearch => 'Search apps...';
+  String get perAppShowSystem => 'Show system apps';
+  String get perAppSelectAll => 'Select All';
+  String get perAppDeselectAll => 'Deselect All';
+  String perAppSelected(int count) => '$count selected';
+  String get perAppDisabledHint => 'Disabled when no apps selected';
+  String get perAppRestartRequired => 'Reconnect VPN to apply changes';
 }
 
 class _Zh extends S {
@@ -138,4 +151,17 @@ class _Zh extends S {
   @override String get about => '关于';
   @override String get sourceCode => '源代码';
   @override String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+
+  // Per-App Proxy
+  @override String get perAppProxy => '分应用代理';
+  @override String get perAppProxyDesc => '选择哪些应用使用 VPN';
+  @override String get perAppModeProxy => '仅代理选中';
+  @override String get perAppModeBypass => '绕过选中';
+  @override String get perAppSearch => '搜索应用...';
+  @override String get perAppShowSystem => '显示系统应用';
+  @override String get perAppSelectAll => '全选';
+  @override String get perAppDeselectAll => '取消全选';
+  @override String perAppSelected(int count) => '已选 $count 个';
+  @override String get perAppDisabledHint => '未选择应用时不生效';
+  @override String get perAppRestartRequired => '重新连接 VPN 以应用更改';
 }

@@ -12,6 +12,7 @@ import io.github.madeye.meow.database.PrivateDatabase
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import io.github.madeye.meow.preference.DataStore
 import io.github.madeye.meow.subscription.SubscriptionService
 import androidx.core.view.WindowCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -154,6 +155,57 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         } catch (_: Exception) {
                             result.success("unknown")
                         }
+                    }
+                    "getInstalledApps" -> {
+                        scope.launch(Dispatchers.IO) {
+                            val pm = packageManager
+                            val apps = pm.getInstalledApplications(android.content.pm.PackageManager.GET_META_DATA)
+                                .filter { it.packageName != packageName }
+                                .map { appInfo ->
+                                    mapOf(
+                                        "packageName" to appInfo.packageName,
+                                        "appName" to (pm.getApplicationLabel(appInfo)?.toString() ?: appInfo.packageName),
+                                        "isSystem" to ((appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0),
+                                    )
+                                }
+                                .sortedBy { (it["appName"] as String).lowercase() }
+                            withContext(Dispatchers.Main) { result.success(apps) }
+                        }
+                    }
+                    "getAppIcon" -> {
+                        val pkg = call.argument<String>("packageName") ?: ""
+                        scope.launch(Dispatchers.IO) {
+                            try {
+                                val drawable = packageManager.getApplicationIcon(pkg)
+                                val bitmap = if (drawable is android.graphics.drawable.BitmapDrawable) {
+                                    drawable.bitmap
+                                } else {
+                                    val bmp = android.graphics.Bitmap.createBitmap(48, 48, android.graphics.Bitmap.Config.ARGB_8888)
+                                    val canvas = android.graphics.Canvas(bmp)
+                                    drawable.setBounds(0, 0, 48, 48)
+                                    drawable.draw(canvas)
+                                    bmp
+                                }
+                                val stream = java.io.ByteArrayOutputStream()
+                                bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG, 80, stream)
+                                withContext(Dispatchers.Main) { result.success(stream.toByteArray()) }
+                            } catch (_: Exception) {
+                                withContext(Dispatchers.Main) { result.success(null) }
+                            }
+                        }
+                    }
+                    "getPerAppConfig" -> {
+                        result.success(mapOf(
+                            "mode" to DataStore.perAppMode,
+                            "packages" to DataStore.perAppPackages,
+                        ))
+                    }
+                    "setPerAppConfig" -> {
+                        val mode = call.argument<String>("mode") ?: "proxy"
+                        val packages = call.argument<String>("packages") ?: "[]"
+                        DataStore.perAppMode = mode
+                        DataStore.perAppPackages = packages
+                        result.success(null)
                     }
                     "getLogs" -> result.success(emptyList<String>()) // TODO: implement log polling
                     "getTrafficHistory" -> {
