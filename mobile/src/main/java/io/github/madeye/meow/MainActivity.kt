@@ -3,6 +3,8 @@ package io.github.madeye.meow
 import android.content.Intent
 import android.net.VpnService
 import android.os.Bundle
+import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.analytics.logEvent
 import io.github.madeye.meow.aidl.MihomoConnection
 import io.github.madeye.meow.aidl.TrafficStats
 import io.github.madeye.meow.bg.BaseService
@@ -30,6 +32,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         private const val REQUEST_VPN = 1
     }
 
+    private val analytics by lazy { FirebaseAnalytics.getInstance(this) }
     private val connection = MihomoConnection(listenForBandwidth = true)
     private var state = BaseService.State.Idle
     private var stateEventSink: EventChannel.EventSink? = null
@@ -56,8 +59,12 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, VPN_CHANNEL)
             .setMethodCallHandler { call, result ->
                 when (call.method) {
-                    "connect" -> { startVpnWithPermission(); result.success(null) }
+                    "connect" -> {
+                        analytics.logEvent("vpn_connect") {}
+                        startVpnWithPermission(); result.success(null)
+                    }
                     "disconnect" -> {
+                        analytics.logEvent("vpn_disconnect") {}
                         sendBroadcast(Intent(io.github.madeye.meow.utils.Action.CLOSE).setPackage(packageName))
                         result.success(null)
                     }
@@ -73,6 +80,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                     "addSubscription" -> {
                         val name = call.argument<String>("name") ?: ""
                         val url = call.argument<String>("url") ?: ""
+                        analytics.logEvent("subscription_add") {}
                         scope.launch {
                             try {
                                 SubscriptionService.addSubscription(name, url)
@@ -86,6 +94,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         val name = call.argument<String>("name") ?: ""
                         val url = call.argument<String>("url") ?: ""
+                        analytics.logEvent("subscription_edit") {}
                         val existing = PrivateDatabase.profileDao.getById(id)
                         if (existing != null) {
                             PrivateDatabase.profileDao.update(existing.copy(name = name, url = url))
@@ -106,12 +115,14 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                     }
                     "deleteSubscription" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        analytics.logEvent("subscription_delete") {}
                         val p = PrivateDatabase.profileDao.getById(id)
                         if (p != null) PrivateDatabase.profileDao.delete(p)
                         result.success(null)
                     }
                     "selectProfile" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        analytics.logEvent("profile_select") {}
                         PrivateDatabase.profileDao.deselectAll()
                         PrivateDatabase.profileDao.select(id)
                         result.success(null)
@@ -119,11 +130,15 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                     "saveSelectedProxy" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         val proxyName = call.argument<String>("proxyName") ?: ""
+                        analytics.logEvent("proxy_node_select") {
+                            param("proxy_name", proxyName)
+                        }
                         PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
                         result.success(null)
                     }
                     "refreshSubscription" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        analytics.logEvent("subscription_refresh") {}
                         val p = PrivateDatabase.profileDao.getById(id)
                         if (p != null) {
                             scope.launch {
@@ -140,6 +155,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         }
                     }
                     "refreshAll" -> {
+                        analytics.logEvent("subscription_refresh_all") {}
                         scope.launch {
                             try {
                                 SubscriptionService.refreshAll()
@@ -203,6 +219,9 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                     "setPerAppConfig" -> {
                         val mode = call.argument<String>("mode") ?: "proxy"
                         val packages = call.argument<String>("packages") ?: "[]"
+                        analytics.logEvent("per_app_proxy_save") {
+                            param("mode", mode)
+                        }
                         DataStore.perAppMode = mode
                         DataStore.perAppPackages = packages
                         result.success(null)
@@ -269,6 +288,11 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
     override fun stateChanged(state: BaseService.State, profileName: String, msg: String?) {
         this.state = state
         runOnUiThread { stateEventSink?.success(state.ordinal) }
+
+        analytics.logEvent("vpn_state_change") {
+            param("state", state.name)
+            if (profileName.isNotEmpty()) param("profile", profileName)
+        }
 
         if (state == BaseService.State.Connected) {
             lastTrafficTx = 0L

@@ -72,7 +72,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
+  bool _toggling = false;
+
   Future<void> _toggle(bool value) async {
+    if (_toggling) return;
+    setState(() => _toggling = true);
     try {
       if (value) {
         await _vpn.connect();
@@ -86,6 +90,11 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     }
+    // Reset after state stream delivers the transitioning state,
+    // or after a short delay as fallback.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _toggling = false);
+    });
   }
 
   @override
@@ -113,21 +122,25 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             actions: [
-              if (isTransitioning)
-                const Padding(
-                  padding: EdgeInsets.only(right: 16),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              else
-                Switch(
-                  value: isOn,
-                  onChanged: _state.canToggle ? _toggle : null,
-                  activeTrackColor: Colors.greenAccent,
-                ),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: isTransitioning
+                    ? const Padding(
+                        key: ValueKey('spinner'),
+                        padding: EdgeInsets.only(right: 16),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : Switch(
+                        key: const ValueKey('switch'),
+                        value: isOn,
+                        onChanged: _state.canToggle && !_toggling ? _toggle : null,
+                        activeTrackColor: Colors.greenAccent,
+                      ),
+              ),
             ],
           ),
 
