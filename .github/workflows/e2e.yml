@@ -131,11 +131,9 @@ jobs:
           target: google_apis
           arch: x86_64
           force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
           disable-animations: true
-          script: |
-            ADB=$ANDROID_HOME/platform-tools/adb EMULATOR=$ANDROID_HOME/emulator/emulator SSSERVER=$HOME/.local/bin/ssserver ./test-e2e.sh
-            $ANDROID_HOME/platform-tools/adb emu kill || true
+          script: ADB=$ANDROID_HOME/platform-tools/adb EMULATOR=$ANDROID_HOME/emulator/emulator SSSERVER=$HOME/.local/bin/ssserver ./test-e2e.sh
 
       - name: Upload screenshots
         if: always()
