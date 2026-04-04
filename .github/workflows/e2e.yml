@@ -121,19 +121,31 @@ jobs:
           disable-animations: true
           script: echo "Generated AVD snapshot for caching."
 
+      - name: Start emulator
+        run: |
+          nohup $ANDROID_HOME/emulator/emulator -avd test -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save &
+          $ANDROID_HOME/platform-tools/adb wait-for-device
+          # Wait for boot
+          for i in $(seq 1 120); do
+            if [ "$($ANDROID_HOME/platform-tools/adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ]; then
+              echo "Emulator booted"
+              break
+            fi
+            sleep 1
+          done
+          $ANDROID_HOME/platform-tools/adb shell settings put global window_animation_scale 0
+          $ANDROID_HOME/platform-tools/adb shell settings put global transition_animation_scale 0
+          $ANDROID_HOME/platform-tools/adb shell settings put global animator_duration_scale 0
+
       - name: Run E2E tests
         env:
           SKIP_EMULATOR_BOOT: "true"
           APK: mobile/build/outputs/apk/debug/mobile-debug.apk
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot-save
-          disable-animations: true
-          script: ADB=$ANDROID_HOME/platform-tools/adb EMULATOR=$ANDROID_HOME/emulator/emulator SSSERVER=$HOME/.local/bin/ssserver ./test-e2e.sh
+        run: ADB=$ANDROID_HOME/platform-tools/adb EMULATOR=$ANDROID_HOME/emulator/emulator SSSERVER=$HOME/.local/bin/ssserver ./test-e2e.sh
+
+      - name: Stop emulator
+        if: always()
+        run: $ANDROID_HOME/platform-tools/adb emu kill || true
 
       - name: Upload screenshots
         if: always()
