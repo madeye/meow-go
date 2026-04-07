@@ -54,8 +54,8 @@ fun Project.setupCore() {
     setupCommon()
     android.apply {
         defaultConfig {
-            versionCode = 1000008
-            versionName = "0.3.2"
+            versionCode = 1000009
+            versionName = "0.3.3"
         }
         compileOptions.isCoreLibraryDesugaringEnabled = true
         lint.apply {
@@ -69,6 +69,11 @@ fun Project.setupApp() {
     setupCore()
 
     android.apply {
+        // Analytics opt-in is controlled per buildType via this manifest
+        // placeholder; the playRelease buildType (used for Google Play uploads)
+        // overrides it to "false" so Firebase Analytics never collects.
+        defaultConfig.manifestPlaceholders["analyticsEnabled"] = "true"
+
         buildTypes {
             getByName("debug") {
                 isPseudoLocalesEnabled = true
@@ -79,6 +84,13 @@ fun Project.setupApp() {
                 isMinifyEnabled = true
                 proguardFile(getDefaultProguardFile("proguard-android.txt"))
                 proguardFile("proguard-rules.pro")
+            }
+            // Google Play distribution build — same as release but with
+            // Firebase Analytics collection disabled at the manifest level.
+            create("playRelease") {
+                initWith(getByName("release"))
+                matchingFallbacks += "release"
+                manifestPlaceholders["analyticsEnabled"] = "false"
             }
         }
         packagingOptions.jniLibs.useLegacyPackaging = true

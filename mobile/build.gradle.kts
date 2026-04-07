@@ -41,6 +41,9 @@ android {
             getByName("release") {
                 signingConfig = signingConfigs.getByName("release")
             }
+            getByName("playRelease") {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 }
