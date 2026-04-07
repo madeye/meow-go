@@ -71,6 +71,14 @@ class VpnChannel {
   Future<void> saveSelectedProxy(int profileId, String proxyName) =>
       _method.invokeMethod('saveSelectedProxy', {'id': profileId, 'proxyName': proxyName});
 
+  Future<void> updateProfileYaml(int id, String yamlContent) =>
+      _method.invokeMethod('updateProfileYaml', {'id': id, 'yamlContent': yamlContent});
+
+  Future<String> revertProfileYaml(int id) async {
+    final result = await _method.invokeMethod<String>('revertProfileYaml', {'id': id});
+    return result ?? '';
+  }
+
   Future<List<Map<String, dynamic>>> getTrafficHistory() async {
     final list = await _method.invokeMethod<List>('getTrafficHistory') ?? [];
     return list.map((e) => Map<String, dynamic>.from(e as Map)).toList();
@@ -96,7 +104,9 @@ class VpnChannel {
         'packages': json.encode(packages),
       });
 
-  /// Select a proxy node in all Selector groups that contain it.
+  /// Select a proxy node in every Selector group whose default (first
+  /// listed proxy) is not `DIRECT`. Groups that default to DIRECT are
+  /// treated as bypass/direct groups and left untouched.
   /// [yamlContent] is the profile YAML used to find group membership.
   Future<void> selectProxyNode(String nodeName, String yamlContent) async {
     final groups = _parseSelectorGroups(yamlContent);
@@ -104,7 +114,9 @@ class VpnChannel {
     try {
       for (final group in groups) {
         final groupName = group['name'] as String? ?? '';
-        final proxies = group['proxies'] as List<String>? ?? [];
+        final proxies = group['proxies'] as List<String>? ?? const [];
+        if (proxies.isEmpty) continue;
+        if (proxies.first == 'DIRECT') continue;
         if (!proxies.contains(nodeName)) continue;
 
         final putReq = await client.put(

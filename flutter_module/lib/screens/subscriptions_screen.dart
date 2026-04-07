@@ -4,6 +4,7 @@ import '../app.dart' show notifyProfileChanged;
 import '../l10n/strings.dart';
 import '../services/vpn_channel.dart';
 import '../models/profile.dart';
+import 'yaml_editor_screen.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -114,6 +115,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     await _load(notify: true);
   }
 
+  Future<void> _editYaml(ClashProfile profile) async {
+    final saved = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => YamlEditorScreen(profile: profile)),
+    );
+    if (saved == true) await _load(notify: true);
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
@@ -160,6 +168,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       onEdit: () => _editSubscription(_profiles[i]),
                       onDelete: () => _deleteSubscription(_profiles[i]),
                       onRefresh: () => _refreshSubscription(_profiles[i]),
+                      onEditYaml: () => _editYaml(_profiles[i]),
                     ),
                   ),
                 ),
@@ -173,6 +182,7 @@ class _ProfileTile extends StatefulWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   final VoidCallback onRefresh;
+  final VoidCallback onEditYaml;
 
   const _ProfileTile({
     required this.profile,
@@ -180,6 +190,7 @@ class _ProfileTile extends StatefulWidget {
     required this.onEdit,
     required this.onDelete,
     required this.onRefresh,
+    required this.onEditYaml,
   });
 
   @override
@@ -234,6 +245,7 @@ class _ProfileTileState extends State<_ProfileTile> {
                     switch (v) {
                       case 'select': widget.onSelect();
                       case 'edit': widget.onEdit();
+                      case 'editYaml': widget.onEditYaml();
                       case 'refresh': widget.onRefresh();
                       case 'delete': widget.onDelete();
                     }
@@ -242,6 +254,8 @@ class _ProfileTileState extends State<_ProfileTile> {
                     if (!p.selected)
                       PopupMenuItem(value: 'select', child: Text(s.select)),
                     PopupMenuItem(value: 'edit', child: Text(s.edit)),
+                    if (p.yamlContent.isNotEmpty)
+                      PopupMenuItem(value: 'editYaml', child: Text(s.editYaml)),
                     PopupMenuItem(value: 'refresh', child: Text(s.refresh)),
                     PopupMenuItem(value: 'delete', child: Text(s.delete)),
                   ],

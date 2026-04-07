@@ -42,6 +42,15 @@ class S {
   String updated(String name) => '$name updated';
   String refreshFailed(String err) => 'Refresh failed: $err';
   String get proxies => 'proxies';
+  String get editYaml => 'Edit YAML';
+  String get yamlValid => 'Valid YAML';
+  String yamlInvalid(int line, int col, String msg) => 'Line $line, Col $col: $msg';
+  String get revert => 'Revert';
+  String get revertConfirm => 'Revert to last downloaded version?';
+  String get discardChanges => 'Discard unsaved changes?';
+  String get discard => 'Discard';
+  String get yamlSaved => 'YAML saved';
+  String get yamlReverted => 'Reverted to original';
 
   // Traffic
   String get traffic => 'Traffic';
@@ -126,6 +135,15 @@ class _Zh extends S {
   @override String updated(String name) => '$name 已更新';
   @override String refreshFailed(String err) => '刷新失败：$err';
   @override String get proxies => '个节点';
+  @override String get editYaml => '编辑 YAML';
+  @override String get yamlValid => 'YAML 格式正确';
+  @override String yamlInvalid(int line, int col, String msg) => '第 $line 行第 $col 列：$msg';
+  @override String get revert => '还原';
+  @override String get revertConfirm => '还原为最近下载的版本？';
+  @override String get discardChanges => '放弃未保存的更改？';
+  @override String get discard => '放弃';
+  @override String get yamlSaved => 'YAML 已保存';
+  @override String get yamlReverted => '已还原';
 
   // Traffic
   @override String get traffic => '流量';

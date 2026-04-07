@@ -11,6 +11,8 @@ import io.github.madeye.meow.bg.BaseService
 import io.github.madeye.meow.database.ClashProfile
 import io.github.madeye.meow.database.DailyTraffic
 import io.github.madeye.meow.database.PrivateDatabase
+import io.github.madeye.meow.editor.SoraEditorViewFactory
+import io.github.madeye.meow.editor.SoraEditorViewType
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -55,6 +57,11 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+
+        flutterEngine.platformViewsController.registry.registerViewFactory(
+            SoraEditorViewType.VIEW_TYPE,
+            SoraEditorViewFactory(flutterEngine.dartExecutor.binaryMessenger),
+        )
 
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, VPN_CHANNEL)
             .setMethodCallHandler { call, result ->
@@ -135,6 +142,20 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         }
                         PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
                         result.success(null)
+                    }
+                    "updateProfileYaml" -> {
+                        val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        val yaml = call.argument<String>("yamlContent") ?: ""
+                        analytics.logEvent("profile_yaml_edit") {}
+                        PrivateDatabase.profileDao.updateYamlContent(id, yaml)
+                        result.success(null)
+                    }
+                    "revertProfileYaml" -> {
+                        val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        analytics.logEvent("profile_yaml_revert") {}
+                        PrivateDatabase.profileDao.revertYamlContent(id)
+                        val p = PrivateDatabase.profileDao.getById(id)
+                        result.success(p?.yamlContent ?: "")
                     }
                     "refreshSubscription" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
@@ -343,5 +364,6 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         "tx" to tx.toInt(),
         "rx" to rx.toInt(),
         "selectedProxy" to selectedProxy,
+        "yamlBackup" to yamlBackup,
     )
 }

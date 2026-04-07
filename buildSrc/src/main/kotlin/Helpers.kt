@@ -21,7 +21,10 @@ val Project.currentFlavor get() = gradle.startParameter.taskNames.let { tasks ->
 }
 
 fun Project.setupCommon() {
-    val javaVersion = JavaVersion.VERSION_11
+    // JVM 17 — required by sora-editor (and matches the Flutter add-to-app
+    // submodule which already builds at 17). Bumped from 11 when adding
+    // sora-editor; the inline functions in sora-editor are compiled at 17.
+    val javaVersion = JavaVersion.VERSION_17
     android.apply {
         compileSdkVersion(36)
         defaultConfig {
@@ -75,6 +78,7 @@ fun Project.setupApp() {
                 isShrinkResources = true
                 isMinifyEnabled = true
                 proguardFile(getDefaultProguardFile("proguard-android.txt"))
+                proguardFile("proguard-rules.pro")
             }
         }
         packagingOptions.jniLibs.useLegacyPackaging = true

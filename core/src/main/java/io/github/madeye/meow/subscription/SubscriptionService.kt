@@ -13,7 +13,7 @@ object SubscriptionService {
         connection.connectTimeout = 10000
         connection.readTimeout = 10000
         val yaml = connection.inputStream.bufferedReader().readText()
-        profile.copy(yamlContent = yaml, lastUpdated = System.currentTimeMillis())
+        profile.copy(yamlContent = yaml, yamlBackup = yaml, lastUpdated = System.currentTimeMillis())
     }
 
     suspend fun addSubscription(name: String, url: String): ClashProfile = withContext(Dispatchers.IO) {
