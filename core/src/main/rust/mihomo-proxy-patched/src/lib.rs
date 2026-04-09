@@ -4,7 +4,9 @@ pub mod group;
 pub mod health;
 pub mod reject;
 pub mod shadowsocks_adapter;
+pub mod simple_obfs;
 pub mod trojan;
+pub mod v2ray_plugin;
 
 pub use connect::set_pre_connect_hook;
 

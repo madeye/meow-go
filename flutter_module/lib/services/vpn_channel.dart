@@ -104,19 +104,24 @@ class VpnChannel {
         'packages': json.encode(packages),
       });
 
-  /// Select a proxy node in every Selector group whose default (first
-  /// listed proxy) is not `DIRECT`. Groups that default to DIRECT are
-  /// treated as bypass/direct groups and left untouched.
+  /// Select a proxy node in every Selector group whose default (first listed
+  /// proxy) does NOT resolve to DIRECT or REJECT. Groups that default to a
+  /// bypass/block outcome — directly, or transitively through another select
+  /// group — are treated as kill-switch/bypass groups and left untouched.
   /// [yamlContent] is the profile YAML used to find group membership.
   Future<void> selectProxyNode(String nodeName, String yamlContent) async {
     final groups = _parseSelectorGroups(yamlContent);
+    final groupsByName = <String, List<String>>{
+      for (final g in groups)
+        (g['name'] as String): (g['proxies'] as List<String>),
+    };
     final client = HttpClient();
     try {
       for (final group in groups) {
         final groupName = group['name'] as String? ?? '';
         final proxies = group['proxies'] as List<String>? ?? const [];
         if (proxies.isEmpty) continue;
-        if (proxies.first == 'DIRECT') continue;
+        if (_resolvesToBypass(proxies.first, groupsByName, <String>{})) continue;
         if (!proxies.contains(nodeName)) continue;
 
         final putReq = await client.put(
@@ -129,6 +134,21 @@ class VpnChannel {
     } finally {
       client.close();
     }
+  }
+
+  /// Returns true if [name] is DIRECT, REJECT, or a proxy-group whose default
+  /// (first listed proxy) transitively resolves to DIRECT/REJECT. Visited set
+  /// guards against cycles in pathological configs.
+  static bool _resolvesToBypass(
+    String name,
+    Map<String, List<String>> groupsByName,
+    Set<String> visited,
+  ) {
+    if (name == 'DIRECT' || name == 'REJECT') return true;
+    final nested = groupsByName[name];
+    if (nested == null || nested.isEmpty) return false;
+    if (!visited.add(name)) return false; // cycle → treat as non-bypass
+    return _resolvesToBypass(nested.first, groupsByName, visited);
   }
 
   /// Parse proxy-groups of type "select" from YAML, returning group name + proxy list.

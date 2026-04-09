@@ -32,15 +32,17 @@ Network
 ## Features
 
 - **Proxy Protocols**: Shadowsocks, Trojan, Direct
-- **Rule Engine**: Domain, IP, port, geo-based routing
+  - Shadowsocks plugins: built-in `simple-obfs` (HTTP/TLS) and `v2ray-plugin`
+    (WebSocket, optional TLS) — no external SIP003 binary required
+- **Rule Engine**: Domain, IP, port, geo-based routing, rule-providers
 - **tun2socks**: Pure Rust via netstack-smoltcp (no C dependencies)
 - **DNS**: DoH forwarding through proxy chain
 - **Socket Protection**: Per-socket `VpnService.protect(fd)` via JNI callback
 - **Flutter UI**: Shadowrocket-style tab view
   - Home: VPN toggle, proxy node selection, connection status
-  - Subscribe: Add/edit/remove subscriptions, view proxy nodes
+  - Subscribe: Add/edit/remove subscriptions, view proxy nodes, YAML editor
   - Traffic: Real-time speed chart, session upload/download stats
-  - Settings: Version, network config, about
+  - Settings: Version, network config, per-app VPN proxy/bypass, about
 - **i18n**: English, Chinese (zh_CN)
 - **E2E Tests**: Automated with ssserver + Android emulator
 

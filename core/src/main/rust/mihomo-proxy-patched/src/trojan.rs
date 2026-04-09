@@ -221,7 +221,7 @@ impl ProxyAdapter for TrojanAdapter {
             self.addr_str
         );
 
-        // TCP connect
+        // TCP connect — routed through the protect hook on Android.
         let tcp = protected_tcp_connect(&self.addr_str)
             .await
             .map_err(MihomoError::Io)?;
