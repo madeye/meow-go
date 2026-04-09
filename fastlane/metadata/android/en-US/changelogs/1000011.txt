@@ -1,0 +1,4 @@
+- Switch proxy engine to upstream MetaCubeX/mihomo (Go)
+- Rust layer simplified to pure tun2socks + DoH forwarder
+- New package: io.github.madeye.meow.go
+- Renamed to Meow(Go)

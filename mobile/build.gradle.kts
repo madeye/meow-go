@@ -22,7 +22,7 @@ android {
     namespace = "io.github.madeye.meow"
 
     defaultConfig {
-        applicationId = "io.github.madeye.meow"
+        applicationId = "io.github.madeye.meow.go"
     }
 
     val keystorePath = prop("KEYSTORE_PATH")

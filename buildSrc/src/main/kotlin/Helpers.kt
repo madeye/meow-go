@@ -54,8 +54,8 @@ fun Project.setupCore() {
     setupCommon()
     android.apply {
         defaultConfig {
-            versionCode = 1000010
-            versionName = "0.3.4"
+            versionCode = 1000011
+            versionName = "0.4.0"
         }
         compileOptions.isCoreLibraryDesugaringEnabled = true
         lint.apply {
@@ -85,6 +85,12 @@ fun Project.setupApp() {
                 isMinifyEnabled = true
                 proguardFile(getDefaultProguardFile("proguard-android.txt"))
                 proguardFile("proguard-rules.pro")
+                // Go-built c-shared libraries don't survive a second
+                // strip pass by AGP — the Go runtime relies on section
+                // metadata that NDK strip can corrupt. The build already
+                // passes -ldflags="-s -w", so the library is as small as
+                // it's going to get; skip packaging-time stripping.
+                packagingOptions.doNotStrip("**/libmihomo.so")
             }
             // Google Play distribution build — same as release but with
             // Firebase Analytics collection disabled at the manifest level.

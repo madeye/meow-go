@@ -7,6 +7,7 @@ package main
 
 import (
 	"errors"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 
@@ -40,7 +41,9 @@ func getLastError() string {
 // loads config.yaml and any geoip / geosite assets from the correct place.
 func setHomeDir(dir string) {
 	constant.SetHomeDir(dir)
-	constant.SetConfig("config.yaml")
+	// mihomo's Path.Config() returns configFile verbatim without joining
+	// against HomeDir, so pass an absolute path.
+	constant.SetConfig(filepath.Join(dir, "config.yaml"))
 }
 
 // startEngine parses $HOME_DIR/config.yaml and boots the mihomo hub. The

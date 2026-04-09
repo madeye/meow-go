@@ -14,7 +14,7 @@ class MihomoInstance(val profile: ClashProfile) {
     private var prevRx: Long = 0
     private var lastUpdate: Long = 0
 
-    fun start(configDir: File) {
+    fun start(configDir: File, vpnService: android.net.VpnService) {
         val configFile = File(configDir, "config.yaml")
         // Strip sections handled by the app, not mihomo:
         // - subscriptions: refresh is done by the app
@@ -32,6 +32,12 @@ class MihomoInstance(val profile: ClashProfile) {
         // The Rust tun2socks side also needs the home dir so its DoH
         // client can read DoH URLs out of config.yaml.
         Tun2SocksCore.nativeSetHomeDir(configDir.absolutePath)
+        // Register the VpnService with the Go engine BEFORE starting it.
+        // hub.Parse triggers synchronous provider fetches whose outbound
+        // sockets hit the dialer protect hook — the hook must already be
+        // able to reach VpnService.protect() by then, or those sockets
+        // route back through the TUN and the engine loops.
+        MihomoEngine.nativeSetProtect(vpnService)
         val result = MihomoEngine.nativeStartEngine("127.0.0.1:9090", "")
         if (result != 0) {
             throw RuntimeException("Failed to start engine: ${MihomoEngine.nativeGetLastError()}")
@@ -40,10 +46,6 @@ class MihomoInstance(val profile: ClashProfile) {
     }
 
     fun startTun2Socks(vpnService: android.net.VpnService, fd: Int) {
-        // Register the VpnService with the Go engine first — its dialer
-        // protect hook needs to be live before any outbound proxy socket
-        // is created (the hook runs synchronously inside dialer.Control).
-        MihomoEngine.nativeSetProtect(vpnService)
         val result = Tun2SocksCore.nativeStartTun2Socks(vpnService, fd, 7890, 1053)
         if (result != 0) {
             throw RuntimeException("Failed to start tun2socks: ${Tun2SocksCore.nativeGetLastError()}")

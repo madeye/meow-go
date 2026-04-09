@@ -1,2 +1,2 @@
 json_key_file("fastlane/play-store-key.json")
-package_name("io.github.madeye.meow")
+package_name("io.github.madeye.meow.go")

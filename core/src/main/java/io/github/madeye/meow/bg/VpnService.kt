@@ -65,8 +65,15 @@ class VpnService : BaseVpnService(), BaseService.Interface {
     override suspend fun startProcesses() {
         val configDir = File(Core.deviceStorage.noBackupFilesDir, "mihomo")
         configDir.mkdirs()
-        data.mihomoInstance!!.start(configDir)
+        // Establish the VPN (TUN) first so VpnService.protect() is live
+        // before the mihomo engine boots. mihomo's hub.Parse triggers
+        // synchronous provider fetches, which call the dialer protect
+        // hook — if the hook fires before we've stored the VpnService
+        // global ref, every proxy-bound socket routes back through the
+        // TUN and the engine loops on itself.
         startVpn()
+        data.mihomoInstance!!.start(configDir, this)
+        data.mihomoInstance!!.startTun2Socks(this, conn!!.fd)
     }
 
     override val isVpnService get() = true
@@ -117,7 +124,6 @@ class VpnService : BaseVpnService(), BaseService.Interface {
 
         val conn = builder.establish() ?: throw NullConnectionException()
         this.conn = conn
-        data.mihomoInstance!!.startTun2Socks(this, conn.fd)
     }
 
     override fun onDestroy() {
