@@ -190,11 +190,15 @@ sleep 2
 info "  Creating database with subscription profile on host..."
 SUB_YAML=$(cat /tmp/test-sub/config.yaml)
 
-# Create a fresh Room database on the host with the correct schema
+# Create a fresh Room database on the host with the correct schema.
+# Schema must match core/schemas/io.github.madeye.meow.database.PrivateDatabase/4.json —
+# Room refuses to open a pre-packaged DB whose identity hash or column set drifts
+# from the generated schema, and the process crashes in Application.onCreate().
 rm -f /tmp/mihomo.db /tmp/mihomo.db-wal /tmp/mihomo.db-shm
 sqlite3 /tmp/mihomo.db <<DBEOF
+PRAGMA user_version = 4;
 CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT);
-INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42,'be2bb5a07255600b6fb3c0ab8f8511a3');
+INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42,'0ad45cbdd12706e49d09c67996a18e92');
 CREATE TABLE IF NOT EXISTS clash_profile (
     id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
     name TEXT NOT NULL,
@@ -204,7 +208,8 @@ CREATE TABLE IF NOT EXISTS clash_profile (
     last_updated INTEGER NOT NULL,
     tx INTEGER NOT NULL,
     rx INTEGER NOT NULL,
-    selected_proxy TEXT NOT NULL DEFAULT ''
+    selected_proxy TEXT NOT NULL,
+    yaml_backup TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS daily_traffic (
     date TEXT NOT NULL,
@@ -212,8 +217,8 @@ CREATE TABLE IF NOT EXISTS daily_traffic (
     rx INTEGER NOT NULL,
     PRIMARY KEY(date)
 );
-INSERT INTO clash_profile (name, url, yaml_content, selected, last_updated, tx, rx)
-VALUES ('Test Sub', 'http://$SS_HOST_FROM_EMU:$SUB_PORT/config.yaml', '$(echo "$SUB_YAML" | sed "s/'/''/g")', 1, $(date +%s), 0, 0);
+INSERT INTO clash_profile (name, url, yaml_content, selected, last_updated, tx, rx, selected_proxy, yaml_backup)
+VALUES ('Test Sub', 'http://$SS_HOST_FROM_EMU:$SUB_PORT/config.yaml', '$(echo "$SUB_YAML" | sed "s/'/''/g")', 1, $(date +%s), 0, 0, '', '');
 DBEOF
 
 info "  Verifying profile..."
