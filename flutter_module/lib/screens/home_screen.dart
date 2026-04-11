@@ -10,6 +10,7 @@ import '../models/profile.dart';
 import '../widgets/mode_card.dart';
 import '../widgets/proxy_groups_section.dart';
 import 'connections_screen.dart';
+import 'rules_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -108,9 +109,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     }
     Future.delayed(const Duration(milliseconds: 500), () {
@@ -132,6 +133,14 @@ class _HomeScreenState extends State<HomeScreen> {
             pinned: true,
             title: Text(s.appName),
             actions: [
+              if (isOn)
+                IconButton(
+                  icon: const Icon(Icons.rule_outlined),
+                  tooltip: S.of(context).rules,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RulesScreen()),
+                  ),
+                ),
               if (isOn)
                 IconButton(
                   icon: const Icon(Icons.device_hub),
@@ -157,7 +166,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     : Switch(
                         key: const ValueKey('switch'),
                         value: isOn,
-                        onChanged: _state.canToggle && !_toggling ? _toggle : null,
+                        onChanged: _state.canToggle && !_toggling
+                            ? _toggle
+                            : null,
                         activeTrackColor: Colors.greenAccent,
                       ),
               ),
@@ -167,15 +178,15 @@ class _HomeScreenState extends State<HomeScreen> {
           SliverToBoxAdapter(child: _buildStatusCard(isOn)),
 
           // Mode card
-          SliverToBoxAdapter(
-            child: ModeCard(isVpnConnected: isOn),
-          ),
+          SliverToBoxAdapter(child: ModeCard(isVpnConnected: isOn)),
 
           if (isOn)
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -216,13 +227,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final s = S.of(context);
     String stateLabel(VpnState state) {
       switch (state) {
-        case VpnState.idle: return s.notConnected;
-        case VpnState.connecting: return s.connecting;
-        case VpnState.connected: return s.connected;
-        case VpnState.stopping: return s.disconnecting;
-        case VpnState.stopped: return s.disconnected;
+        case VpnState.idle:
+          return s.notConnected;
+        case VpnState.connecting:
+          return s.connecting;
+        case VpnState.connected:
+          return s.connected;
+        case VpnState.stopping:
+          return s.disconnecting;
+        case VpnState.stopped:
+          return s.disconnected;
       }
     }
+
     final color = isOn ? Colors.greenAccent : Colors.grey;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -262,7 +279,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Text(
                         _profile!.name,
                         style: const TextStyle(
-                            fontSize: 13, color: Colors.white54),
+                          fontSize: 13,
+                          color: Colors.white54,
+                        ),
                       ),
                   ],
                 ),
@@ -300,12 +319,17 @@ class _TrafficTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(rate,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-                Text('$total $label',
-                    style:
-                        const TextStyle(fontSize: 11, color: Colors.white38)),
+                Text(
+                  rate,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '$total $label',
+                  style: const TextStyle(fontSize: 11, color: Colors.white38),
+                ),
               ],
             ),
           ],
