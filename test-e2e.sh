@@ -7,11 +7,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 EMULATOR="${EMULATOR:-/Volumes/Data/workspace/android/emulator/emulator}"
 ADB="${ADB:-/Volumes/Data/workspace/android/platform-tools/adb}"
-AVD="${AVD:-Medium_Phone_API_36.1}"
+AVD="${AVD:-meow_api35}"
 APK="${APK:-$SCRIPT_DIR/mobile/build/outputs/apk/debug/mobile-arm64-v8a-debug.apk}"
 SSSERVER="${SSSERVER:-ssserver}"
 V2RAY_PLUGIN="${V2RAY_PLUGIN:-v2ray-plugin}"
-PKG="io.github.madeye.meow"
+PKG="io.github.madeye.meow.go"
+ACTIVITY="io.github.madeye.meow.MainActivity"
 
 SS_ADDR="0.0.0.0:8388"
 SS_PASSWORD="testpassword123"
@@ -164,6 +165,15 @@ fi
 "$ADB" shell settings put global transition_animation_scale 0
 "$ADB" shell settings put global animator_duration_scale 0
 
+# Disable Android Private DNS (DoT on 853). With VPN up, the system routes
+# these DoT requests to the TUN gateway (172.19.0.2:853), which tun2socks
+# only handles on port 53 (DoH). Port 853 falls through to SOCKS5 → mihomo
+# → ssserver, which tries to actually dial 172.19.0.2:853 as a real address
+# and times out. The dangling connections exhaust smoltcp's transmit
+# buffers and all subsequent traffic stalls. API 35 Google APIs emulators
+# have Private DNS enabled by default; force it off.
+"$ADB" shell settings put global private_dns_mode off
+
 # Start logcat in background for real-time diagnostics
 info "Starting background logcat -> $LOGCAT_FILE"
 "$ADB" logcat -c 2>/dev/null || true
@@ -182,7 +192,7 @@ info "APK installed."
 # Step 6: Configure subscription
 info "Step 6: Configuring subscription..."
 info "  Launching app to initialize databases..."
-"$ADB" shell am start -W -n "$PKG/.MainActivity"
+"$ADB" shell am start -W -n "$PKG/$ACTIVITY"
 sleep 8
 screenshot "01_init"
 "$ADB" shell am force-stop "$PKG"
@@ -238,8 +248,16 @@ info "  Subscription configuration done."
 ensure_emulator
 info "Step 7: Enabling VPN..."
 
+# Pre-grant the VPN AppOp so VpnService.prepare() returns null and no consent
+# dialog appears. Works on Android emulators where shell has appops privileges;
+# harmless on devices where it doesn't (the dialog will still come up and the
+# uiautomator fallback below will handle it).
+info "  Pre-granting android:activate_vpn AppOp..."
+"$ADB" shell appops set "$PKG" ACTIVATE_VPN allow 2>/dev/null || true
+"$ADB" shell cmd appops set "$PKG" android:activate_vpn allow 2>/dev/null || true
+
 # Launch app with auto_connect=true intent extra — triggers VPN start once service reports Stopped
-"$ADB" shell am start -W -n "$PKG/.MainActivity" --ez auto_connect true
+"$ADB" shell am start -W -n "$PKG/$ACTIVITY" --ez auto_connect true
 
 # Wait for Flutter UI to load (splash screen takes several seconds)
 info "  Waiting for Flutter UI to render..."
@@ -317,10 +335,39 @@ for i in $(seq 1 20); do
         screenshot "03_vpn_dialog"
         sleep 1
 
-        # Try to find and tap the OK button (up to 3 attempts for flaky dumps)
+        # Strategy A: press KEYCODE_ENTER — on AlertDialog the positive action
+        # is the default click target and ENTER activates it reliably across
+        # API levels without needing UI dump parsing.
+        info "  Strategy A: sending KEYCODE_ENTER..."
+        "$ADB" shell input keyevent KEYCODE_ENTER
+        sleep 2
+        ACT_AFTER=$("$ADB" shell dumpsys activity activities 2>/dev/null || true)
+        if ! echo "$ACT_AFTER" | grep -qi "vpndialogs"; then
+            info "  Dialog dismissed via KEYCODE_ENTER"
+            VPN_ACCEPTED=true
+            screenshot "04_after_vpn_accept"
+            break
+        fi
+
+        # Strategy B: TAB to focus the positive button then ENTER. On some
+        # Material dialogs the default focus is on the negative action.
+        info "  Strategy B: TAB + KEYCODE_ENTER..."
+        "$ADB" shell input keyevent KEYCODE_TAB
+        sleep 1
+        "$ADB" shell input keyevent KEYCODE_ENTER
+        sleep 2
+        ACT_AFTER=$("$ADB" shell dumpsys activity activities 2>/dev/null || true)
+        if ! echo "$ACT_AFTER" | grep -qi "vpndialogs"; then
+            info "  Dialog dismissed via TAB+ENTER"
+            VPN_ACCEPTED=true
+            screenshot "04_after_vpn_accept"
+            break
+        fi
+
+        # Strategy C: UI dump + coordinate tap (up to 3 attempts for flaky dumps)
+        info "  Strategy C: uiautomator dump + tap..."
         for attempt in 1 2 3; do
             if try_dismiss_vpn_dialog; then
-                # Button was tapped — wait for the dialog activity to finish
                 sleep 3
                 VPN_ACCEPTED=true
                 break 2
@@ -329,10 +376,22 @@ for i in $(seq 1 20); do
             sleep 1
         done
 
-        # Fallback: blind tap at the "确定" button's known position on 1080x2400
+        # Strategy D: blind tap at the positive button position, computed from
+        # the actual screen size rather than hardcoded 1080x2400 coords.
         if [[ "$VPN_ACCEPTED" != "true" ]]; then
-            info "  Trying blind tap at known button position..."
-            "$ADB" shell input tap 894 1494; sleep 3
+            info "  Strategy D: blind tap at dynamic button position..."
+            WM_SIZE=$("$ADB" shell wm size 2>/dev/null | grep -oE '[0-9]+x[0-9]+' | tail -1 || true)
+            if [[ -n "$WM_SIZE" ]]; then
+                SW="${WM_SIZE%x*}"; SH="${WM_SIZE#*x}"
+                BX=$((SW * 83 / 100))
+                BY=$((SH * 62 / 100))
+                info "  Screen=${SW}x${SH}, tapping ($BX, $BY)"
+                "$ADB" shell input tap "$BX" "$BY"
+            else
+                info "  Could not read wm size, falling back to 894 1494"
+                "$ADB" shell input tap 894 1494
+            fi
+            sleep 3
             VPN_ACCEPTED=true
         fi
 

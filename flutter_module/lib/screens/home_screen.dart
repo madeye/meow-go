@@ -3,9 +3,14 @@ import 'package:flutter/material.dart';
 import '../app.dart' show profileChanged;
 import '../l10n/strings.dart';
 import '../services/vpn_channel.dart';
+import '../services/mihomo_api.dart';
 import '../models/vpn_state.dart';
 import '../models/traffic_stats.dart';
 import '../models/profile.dart';
+import '../widgets/mode_card.dart';
+import '../widgets/proxy_groups_section.dart';
+import 'connections_screen.dart';
+import 'rules_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -19,8 +24,7 @@ class _HomeScreenState extends State<HomeScreen> {
   VpnState _state = VpnState.stopped;
   TrafficStats _traffic = const TrafficStats();
   ClashProfile? _profile;
-  List<String> _proxyNames = [];
-  String? _selectedProxy;
+  Map<String, String> _selections = {};
   StreamSubscription? _stateSub;
   StreamSubscription? _trafficSub;
 
@@ -29,11 +33,11 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadState();
     profileChanged.addListener(_loadState);
-    _stateSub = _vpn.stateStream.listen((s) {
+    _stateSub = _vpn.stateStream.listen((s) async {
       final wasConnected = _state == VpnState.connected;
       if (mounted) setState(() => _state = s);
-      if (!wasConnected && s == VpnState.connected && _selectedProxy != null && _profile != null) {
-        _vpn.selectProxyNode(_selectedProxy!, _profile!.yamlContent);
+      if (!wasConnected && s == VpnState.connected) {
+        await _replaySelections();
       }
     });
     _trafficSub = _vpn.trafficStream.listen((t) {
@@ -46,22 +50,41 @@ class _HomeScreenState extends State<HomeScreen> {
       final state = await _vpn.getState();
       final profile = await _vpn.getSelectedProfile();
       if (mounted) {
+        final changed = _profile?.id != profile?.id;
         setState(() {
           _state = state;
-          final changed = _profile?.id != profile?.id;
           _profile = profile;
-          _proxyNames = profile?.proxyNames ?? [];
-          if (changed || _selectedProxy == null || !_proxyNames.contains(_selectedProxy)) {
-            final saved = profile?.selectedProxy ?? '';
-            if (saved.isNotEmpty && _proxyNames.contains(saved)) {
-              _selectedProxy = saved;
-            } else {
-              _selectedProxy = _proxyNames.isNotEmpty ? _proxyNames.first : null;
-            }
+          if (changed) {
+            _selections = Map.from(profile?.selectedProxies ?? {});
           }
         });
+        if (changed && state == VpnState.connected) {
+          await _replaySelections();
+        }
       }
     } catch (_) {}
+  }
+
+  Future<void> _replaySelections() async {
+    if (_selections.isEmpty || _replaying) return;
+    _replaying = true;
+    try {
+      final result = await MihomoApi.instance.getProxies();
+      await VpnChannel.replaySelectionsOnConnect(
+        result: result,
+        selections: _selections,
+      );
+    } catch (_) {
+    } finally {
+      _replaying = false;
+    }
+  }
+
+  void _onSelectionsChanged(Map<String, String> selections) {
+    setState(() => _selections = selections);
+    if (_profile != null) {
+      _vpn.saveSelectedProxies(_profile!.id, selections);
+    }
   }
 
   @override
@@ -73,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _toggling = false;
+  bool _replaying = false;
 
   Future<void> _toggle(bool value) async {
     if (_toggling) return;
@@ -85,13 +109,11 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('$e')));
       }
     }
-    // Reset after state stream delivers the transitioning state,
-    // or after a short delay as fallback.
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) setState(() => _toggling = false);
     });
@@ -107,21 +129,28 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // App bar with switch
           SliverAppBar(
             pinned: true,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(s.appName),
-                if (_selectedProxy != null && isOn)
-                  Text(
-                    _selectedProxy!,
-                    style: const TextStyle(fontSize: 12, color: Colors.white54, fontWeight: FontWeight.normal),
-                  ),
-              ],
-            ),
+            title: Text(s.appName),
             actions: [
+              if (isOn)
+                IconButton(
+                  icon: const Icon(Icons.rule_outlined),
+                  tooltip: S.of(context).rules,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const RulesScreen()),
+                  ),
+                ),
+              if (isOn)
+                IconButton(
+                  icon: const Icon(Icons.device_hub),
+                  tooltip: S.of(context).connections,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectionsScreen(),
+                    ),
+                  ),
+                ),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: isTransitioning
@@ -137,22 +166,27 @@ class _HomeScreenState extends State<HomeScreen> {
                     : Switch(
                         key: const ValueKey('switch'),
                         value: isOn,
-                        onChanged: _state.canToggle && !_toggling ? _toggle : null,
+                        onChanged: _state.canToggle && !_toggling
+                            ? _toggle
+                            : null,
                         activeTrackColor: Colors.greenAccent,
                       ),
               ),
             ],
           ),
 
-          // Status card
           SliverToBoxAdapter(child: _buildStatusCard(isOn)),
 
-          // Traffic row
+          // Mode card
+          SliverToBoxAdapter(child: ModeCard(isVpnConnected: isOn)),
+
           if (isOn)
             SliverToBoxAdapter(
               child: Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Expanded(
@@ -177,67 +211,12 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
 
-          // Section header
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-              child: Row(
-                children: [
-                  Text(
-                    s.proxyNodes,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
-                    ),
-                  ),
-                  const Spacer(),
-                  if (_profile != null)
-                    Text(
-                      _profile!.name,
-                      style: const TextStyle(
-                          fontSize: 12, color: Colors.white38),
-                    ),
-                ],
-              ),
-            ),
+          ProxyGroupsSection(
+            isVpnConnected: isOn,
+            initialSelections: _selections,
+            onSelectionsChanged: _onSelectionsChanged,
           ),
 
-          // Proxy node list
-          if (_proxyNames.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Text(
-                  s.noSubscriptionHint,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white38),
-                ),
-              ),
-            )
-          else
-            SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final name = _proxyNames[index];
-                  final selected = name == _selectedProxy;
-                  return _ProxyNodeTile(
-                    name: name,
-                    selected: selected,
-                    onTap: () {
-                      setState(() => _selectedProxy = name);
-                      if (_profile != null) {
-                        _vpn.saveSelectedProxy(_profile!.id, name);
-                        _vpn.selectProxyNode(name, _profile!.yamlContent);
-                      }
-                    },
-                  );
-                },
-                childCount: _proxyNames.length,
-              ),
-            ),
-
-          // Bottom padding
           const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
         ],
       ),
@@ -248,13 +227,19 @@ class _HomeScreenState extends State<HomeScreen> {
     final s = S.of(context);
     String stateLabel(VpnState state) {
       switch (state) {
-        case VpnState.idle: return s.notConnected;
-        case VpnState.connecting: return s.connecting;
-        case VpnState.connected: return s.connected;
-        case VpnState.stopping: return s.disconnecting;
-        case VpnState.stopped: return s.disconnected;
+        case VpnState.idle:
+          return s.notConnected;
+        case VpnState.connecting:
+          return s.connecting;
+        case VpnState.connected:
+          return s.connected;
+        case VpnState.stopping:
+          return s.disconnecting;
+        case VpnState.stopped:
+          return s.disconnected;
       }
     }
+
     final color = isOn ? Colors.greenAccent : Colors.grey;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -290,11 +275,13 @@ class _HomeScreenState extends State<HomeScreen> {
                         color: color,
                       ),
                     ),
-                    if (_selectedProxy != null)
+                    if (_profile != null)
                       Text(
-                        _selectedProxy!,
+                        _profile!.name,
                         style: const TextStyle(
-                            fontSize: 13, color: Colors.white54),
+                          fontSize: 13,
+                          color: Colors.white54,
+                        ),
                       ),
                   ],
                 ),
@@ -332,59 +319,20 @@ class _TrafficTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(rate,
-                    style: const TextStyle(
-                        fontSize: 14, fontWeight: FontWeight.w600)),
-                Text('$total $label',
-                    style:
-                        const TextStyle(fontSize: 11, color: Colors.white38)),
+                Text(
+                  rate,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  '$total $label',
+                  style: const TextStyle(fontSize: 11, color: Colors.white38),
+                ),
               ],
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProxyNodeTile extends StatelessWidget {
-  final String name;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _ProxyNodeTile({
-    required this.name,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-      child: Card(
-        color: selected
-            ? Theme.of(context).colorScheme.primaryContainer.withAlpha(60)
-            : null,
-        child: ListTile(
-          leading: Icon(
-            selected ? Icons.check_circle : Icons.circle_outlined,
-            color: selected ? Colors.greenAccent : Colors.white24,
-            size: 22,
-          ),
-          title: Text(
-            name,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-            ),
-          ),
-          trailing: selected
-              ? Text(S.of(context).active,
-                  style: const TextStyle(fontSize: 11, color: Colors.greenAccent))
-              : null,
-          onTap: onTap,
-          dense: true,
         ),
       ),
     );

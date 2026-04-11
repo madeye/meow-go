@@ -143,6 +143,12 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
                         result.success(null)
                     }
+                    "saveSelectedProxies" -> {
+                        val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        val proxiesJson = call.argument<String>("proxiesJson") ?: "{}"
+                        PrivateDatabase.profileDao.updateSelectedProxies(id, proxiesJson)
+                        result.success(null)
+                    }
                     "updateProfileYaml" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         val yaml = call.argument<String>("yamlContent") ?: ""
@@ -247,13 +253,46 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         DataStore.perAppPackages = packages
                         result.success(null)
                     }
-                    "getLogs" -> result.success(emptyList<String>()) // TODO: implement log polling
                     "getTrafficHistory" -> {
                         val cutoff = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -31) }
                         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
                         PrivateDatabase.dailyTrafficDao.deleteBefore(fmt.format(cutoff.time))
                         val entries = PrivateDatabase.dailyTrafficDao.getAll()
                         result.success(entries.map { mapOf("date" to it.date, "tx" to it.tx, "rx" to it.rx) })
+                    }
+                    "testDirectTcp" -> {
+                        val host = call.argument<String>("host") ?: "1.1.1.1"
+                        val port = call.argument<Int>("port") ?: 80
+                        scope.launch(Dispatchers.IO) {
+                            val msg = try {
+                                io.github.madeye.meow.core.MihomoEngine.nativeTestDirectTcp(host, port)
+                            } catch (e: Exception) {
+                                "FAIL ${e.message}"
+                            }
+                            withContext(Dispatchers.Main) { result.success(msg) }
+                        }
+                    }
+                    "testProxyHttp" -> {
+                        val url = call.argument<String>("url") ?: "http://www.gstatic.com/generate_204"
+                        scope.launch(Dispatchers.IO) {
+                            val msg = try {
+                                io.github.madeye.meow.core.MihomoEngine.nativeTestProxyHttp(url)
+                            } catch (e: Exception) {
+                                "FAIL ${e.message}"
+                            }
+                            withContext(Dispatchers.Main) { result.success(msg) }
+                        }
+                    }
+                    "testDnsResolver" -> {
+                        val addr = call.argument<String>("addr") ?: "127.0.0.1:1053"
+                        scope.launch(Dispatchers.IO) {
+                            val msg = try {
+                                io.github.madeye.meow.core.MihomoEngine.nativeTestDnsResolver(addr)
+                            } catch (e: Exception) {
+                                "FAIL ${e.message}"
+                            }
+                            withContext(Dispatchers.Main) { result.success(msg) }
+                        }
                     }
                     else -> result.notImplemented()
                 }
@@ -364,6 +403,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         "tx" to tx.toInt(),
         "rx" to rx.toInt(),
         "selectedProxy" to selectedProxy,
+        "selectedProxies" to selectedProxies,
         "yamlBackup" to yamlBackup,
     )
 }

@@ -1,12 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../l10n/strings.dart';
+import '../models/runtime_config.dart';
+import '../services/mihomo_api.dart';
 import 'per_app_proxy_screen.dart';
+import 'logs_screen.dart';
+import 'diagnostics_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+typedef GetConfigsFn = Future<RuntimeConfig> Function();
+typedef PatchConfigsFn = Future<void> Function(Map<String, dynamic> patch);
 
+class SettingsScreen extends StatefulWidget {
+  // Test injection (null = use MihomoApi.instance)
+  final GetConfigsFn? getConfigsOverride;
+  final PatchConfigsFn? patchConfigsOverride;
+
+  const SettingsScreen({
+    super.key,
+    this.getConfigsOverride,
+    this.patchConfigsOverride,
+  });
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   static const _method = MethodChannel('io.github.madeye.meow/vpn');
+
+  bool _allowLan = false;
+  bool _ipv6 = false;
+  String? _version;
+  int? _memInuse;
+  int? _memOsLimit;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+    _loadMeta();
+  }
+
+  Future<void> _loadMeta() async {
+    // Version
+    try {
+      final v = await _method.invokeMethod<String>('getVersion');
+      if (mounted) setState(() => _version = v);
+    } catch (_) {}
+    // Memory (only available when VPN is connected)
+    try {
+      final mem = await MihomoApi.instance.getMemory();
+      if (mounted) {
+        setState(() {
+          _memInuse = mem.inuse;
+          _memOsLimit = mem.oslimit;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final getConfigs =
+          widget.getConfigsOverride ?? MihomoApi.instance.getConfigs;
+      final config = await getConfigs();
+      if (mounted) {
+        setState(() {
+          _allowLan = config.allowLan;
+          _ipv6 = config.ipv6;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _patch(Map<String, dynamic> patch) async {
+    final patchFn =
+        widget.patchConfigsOverride ?? MihomoApi.instance.patchConfigs;
+    await patchFn(patch);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,10 +90,7 @@ class SettingsScreen extends StatelessWidget {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(s.version),
-            subtitle: FutureBuilder<String?>(
-              future: _method.invokeMethod<String>('getVersion'),
-              builder: (_, snap) => Text(snap.data ?? 'Loading...'),
-            ),
+            subtitle: Text(_version ?? 'Loading...'),
           ),
           ListTile(
             leading: const Icon(Icons.apps),
@@ -33,6 +101,53 @@ class SettingsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (_) => const PerAppProxyScreen()),
             ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.article_outlined),
+            title: Text(s.logs),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LogsScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.monitor_heart_outlined),
+            title: Text(s.diagnostics),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
+            ),
+          ),
+          _SectionHeader(s.runtimeConfig),
+          SwitchListTile(
+            key: const Key('switch_allow_lan'),
+            secondary: const Icon(Icons.lan_outlined),
+            title: Text(s.allowLan),
+            subtitle: Text(s.allowLanDesc),
+            value: _allowLan,
+            onChanged: (v) {
+              final prev = _allowLan;
+              setState(() => _allowLan = v);
+              _patch({'allow-lan': v}).catchError((_) {
+                if (mounted) setState(() => _allowLan = prev);
+              });
+            },
+          ),
+          SwitchListTile(
+            key: const Key('switch_ipv6'),
+            secondary: const Icon(Icons.travel_explore),
+            title: Text(s.ipv6),
+            subtitle: Text(s.ipv6Desc),
+            value: _ipv6,
+            onChanged: (v) {
+              final prev = _ipv6;
+              setState(() => _ipv6 = v);
+              _patch({'ipv6': v}).catchError((_) {
+                if (mounted) setState(() => _ipv6 = prev);
+              });
+            },
           ),
           _SectionHeader(s.network),
           ListTile(
@@ -51,6 +166,12 @@ class SettingsScreen extends StatelessWidget {
             subtitle: Text(s.apiAddr),
           ),
           _SectionHeader(s.about),
+          if (_memInuse != null && _memOsLimit != null)
+            ListTile(
+              leading: const Icon(Icons.memory),
+              title: Text(s.memoryUsage),
+              subtitle: Text(s.memoryStats(_memInuse!, _memOsLimit!)),
+            ),
           ListTile(
             leading: const Icon(Icons.code),
             title: Text(s.sourceCode),
