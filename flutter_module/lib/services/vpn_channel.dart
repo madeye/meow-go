@@ -136,8 +136,8 @@ class VpnChannel {
       if (group.type != 'Selector') continue;
       final saved = selections[group.name];
       if (saved == null) continue;
-      if (!group.all.contains(saved)) continue;
       if (group.all.isEmpty) continue;
+      if (!group.all.contains(saved)) continue;
       if (_resolvesToBypass(group.all.first, groupsByName, {})) continue;
       try {
         await selectProxy(group.name, saved);
