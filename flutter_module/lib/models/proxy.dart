@@ -25,7 +25,8 @@ class Proxy {
         name: name,
         type: json['type'] as String? ?? '',
         history: (json['history'] as List<dynamic>? ?? [])
-            .map((e) => ProxyHistory.fromJson(e as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map(ProxyHistory.fromJson)
             .toList(),
       );
 

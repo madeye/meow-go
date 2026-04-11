@@ -49,6 +49,7 @@ class ProxiesResult {
     final groups = <String, ProxyGroup>{};
     final proxies = <String, Proxy>{};
     for (final entry in raw.entries) {
+      if (entry.value is! Map<String, dynamic>) continue;
       final data = entry.value as Map<String, dynamic>;
       final type = data['type'] as String? ?? '';
       if (_kGroupTypes.contains(type)) {
