@@ -98,6 +98,15 @@ class S {
   String get autoScroll => 'Auto-scroll';
   String get clear => 'Clear';
 
+  // Connections
+  String get connections => 'Connections';
+  String get noConnections => 'No active connections';
+  String get closeAll => 'Close All';
+  String get closeAllConfirm => 'Close all active connections?';
+  String get filterConnections => 'Filter by host...';
+  String get chain => 'Chain';
+  String get rule => 'Rule';
+
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
   String get perAppProxyDesc => 'Select which apps use the VPN';
@@ -203,6 +212,13 @@ class _Zh extends S {
   @override String get copyAll => '复制全部';
   @override String get autoScroll => '自动滚动';
   @override String get clear => '清除';
+  @override String get connections => '连接';
+  @override String get noConnections => '无活跃连接';
+  @override String get closeAll => '关闭全部';
+  @override String get closeAllConfirm => '关闭所有活跃连接？';
+  @override String get filterConnections => '按主机过滤...';
+  @override String get chain => '链路';
+  @override String get rule => '规则';
 
   // Per-App Proxy
   @override String get perAppProxy => '分应用代理';
