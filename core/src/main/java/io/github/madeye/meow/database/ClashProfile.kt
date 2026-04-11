@@ -14,6 +14,7 @@ data class ClashProfile(
     var rx: Long = 0,
     @ColumnInfo(name = "selected_proxy") var selectedProxy: String = "",
     @ColumnInfo(name = "yaml_backup") var yamlBackup: String = "",
+    @ColumnInfo(name = "selected_proxies") var selectedProxies: String = "{}",
 )
 
 @Dao
@@ -47,6 +48,9 @@ interface ProfileDao {
 
     @Query("UPDATE clash_profile SET selected_proxy = :proxyName WHERE id = :id")
     fun updateSelectedProxy(id: Long, proxyName: String)
+
+    @Query("UPDATE clash_profile SET selected_proxies = :proxiesJson WHERE id = :id")
+    fun updateSelectedProxies(id: Long, proxiesJson: String)
 
     @Query("UPDATE clash_profile SET yaml_content = :yaml WHERE id = :id")
     fun updateYamlContent(id: Long, yaml: String)
