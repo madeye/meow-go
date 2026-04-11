@@ -12,6 +12,7 @@ data class ClashProfile(
     @ColumnInfo(name = "last_updated") var lastUpdated: Long = 0,
     var tx: Long = 0,
     var rx: Long = 0,
+    /** Legacy single-selection field. New per-group selections are in [selectedProxies]. */
     @ColumnInfo(name = "selected_proxy") var selectedProxy: String = "",
     @ColumnInfo(name = "yaml_backup") var yamlBackup: String = "",
     @ColumnInfo(name = "selected_proxies") var selectedProxies: String = "{}",
