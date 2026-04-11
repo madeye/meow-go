@@ -165,6 +165,15 @@ fi
 "$ADB" shell settings put global transition_animation_scale 0
 "$ADB" shell settings put global animator_duration_scale 0
 
+# Disable Android Private DNS (DoT on 853). With VPN up, the system routes
+# these DoT requests to the TUN gateway (172.19.0.2:853), which tun2socks
+# only handles on port 53 (DoH). Port 853 falls through to SOCKS5 → mihomo
+# → ssserver, which tries to actually dial 172.19.0.2:853 as a real address
+# and times out. The dangling connections exhaust smoltcp's transmit
+# buffers and all subsequent traffic stalls. API 35 Google APIs emulators
+# have Private DNS enabled by default; force it off.
+"$ADB" shell settings put global private_dns_mode off
+
 # Start logcat in background for real-time diagnostics
 info "Starting background logcat -> $LOGCAT_FILE"
 "$ADB" logcat -c 2>/dev/null || true
