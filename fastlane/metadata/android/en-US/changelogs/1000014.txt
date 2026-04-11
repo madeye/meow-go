@@ -1,0 +1,1 @@
+- Remove advertising ID (AD_ID) permission — not used
