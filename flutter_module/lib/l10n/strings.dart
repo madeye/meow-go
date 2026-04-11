@@ -142,6 +142,17 @@ class S {
   String get diagRunning => 'Running...';
   String get diagNotRun => '—';
 
+  // Providers
+  String get providers => 'Providers';
+  String get proxyProviders => 'Proxy Providers';
+  String get ruleProviders => 'Rule Providers';
+  String get noProviders => 'No providers configured';
+  String get update => 'Update';
+  String get updating => 'Updating...';
+  String providerProxyCount(int n) => '$n proxies';
+  String providerRuleCount(int n) => '$n rules';
+  String get providerUpdated => 'Updated';
+
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
   String get perAppProxyDesc => 'Select which apps use the VPN';
@@ -385,6 +396,17 @@ class _Zh extends S {
   @override String get diagRun => '运行';
   @override String get diagRunning => '运行中...';
   @override String get diagNotRun => '—';
+
+  // Providers
+  @override String get providers => '提供者';
+  @override String get proxyProviders => '代理提供者';
+  @override String get ruleProviders => '规则提供者';
+  @override String get noProviders => '未配置提供者';
+  @override String get update => '更新';
+  @override String get updating => '更新中...';
+  @override String providerProxyCount(int n) => '$n 个节点';
+  @override String providerRuleCount(int n) => '$n 条规则';
+  @override String get providerUpdated => '已更新';
 
   // Per-App Proxy
   @override
