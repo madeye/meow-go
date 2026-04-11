@@ -7,6 +7,7 @@ import '../services/mihomo_api.dart';
 import '../models/vpn_state.dart';
 import '../models/traffic_stats.dart';
 import '../models/profile.dart';
+import '../widgets/mode_card.dart';
 import '../widgets/proxy_groups_section.dart';
 import 'connections_screen.dart';
 
@@ -164,6 +165,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
 
           SliverToBoxAdapter(child: _buildStatusCard(isOn)),
+
+          // Mode card
+          SliverToBoxAdapter(
+            child: ModeCard(isVpnConnected: isOn),
+          ),
 
           if (isOn)
             SliverToBoxAdapter(
