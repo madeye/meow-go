@@ -118,6 +118,12 @@ class S {
   String get ipv6 => 'IPv6';
   String get ipv6Desc => 'Enable IPv6 support';
 
+  // Rules
+  String get rules => 'Rules';
+  String get noRules => 'No rules found.\nConnect VPN to load rules.';
+  String get filterRules => 'Filter by type, payload or proxy...';
+  String rulesCount(int n) => '$n rules';
+
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
   String get perAppProxyDesc => 'Select which apps use the VPN';
@@ -241,6 +247,12 @@ class _Zh extends S {
   @override String get allowLanDesc => '允许局域网内设备使用此代理';
   @override String get ipv6 => 'IPv6';
   @override String get ipv6Desc => '启用 IPv6 支持';
+
+  // Rules
+  @override String get rules => '规则';
+  @override String get noRules => '未找到规则。\n连接 VPN 以加载规则。';
+  @override String get filterRules => '按类型、载荷或代理过滤...';
+  @override String rulesCount(int n) => '$n 条规则';
 
   // Per-App Proxy
   @override String get perAppProxy => '分应用代理';
