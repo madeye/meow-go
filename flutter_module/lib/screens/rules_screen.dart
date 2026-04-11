@@ -35,11 +35,12 @@ class _RulesScreenState extends State<RulesScreen> {
         });
       }
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _loaded = true;
           _error = true;
         });
+      }
     }
   }
 
