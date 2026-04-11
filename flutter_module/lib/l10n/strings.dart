@@ -107,6 +107,17 @@ class S {
   String get chain => 'Chain';
   String get rule => 'Rule';
 
+  // Mode & Runtime
+  String get mode => 'Mode';
+  String get modeRule => 'Rule';
+  String get modeGlobal => 'Global';
+  String get modeDirect => 'Direct';
+  String get runtimeConfig => 'Runtime';
+  String get allowLan => 'Allow LAN';
+  String get allowLanDesc => 'Allow devices on the local network to use this proxy';
+  String get ipv6 => 'IPv6';
+  String get ipv6Desc => 'Enable IPv6 support';
+
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
   String get perAppProxyDesc => 'Select which apps use the VPN';
@@ -219,6 +230,17 @@ class _Zh extends S {
   @override String get filterConnections => '按主机过滤...';
   @override String get chain => '链路';
   @override String get rule => '规则';
+
+  // Mode & Runtime
+  @override String get mode => '模式';
+  @override String get modeRule => '规则';
+  @override String get modeGlobal => '全局';
+  @override String get modeDirect => '直连';
+  @override String get runtimeConfig => '运行时';
+  @override String get allowLan => '允许局域网';
+  @override String get allowLanDesc => '允许局域网内设备使用此代理';
+  @override String get ipv6 => 'IPv6';
+  @override String get ipv6Desc => '启用 IPv6 支持';
 
   // Per-App Proxy
   @override String get perAppProxy => '分应用代理';
