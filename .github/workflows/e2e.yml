@@ -76,7 +76,7 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
 
       - name: Build debug APK (x86_64)
-        run: ./gradlew :mobile:assembleDebug -PTARGET_ABI=x86_64 -PCARGO_PROFILE=debug
+        run: ./gradlew :mobile:assembleDebug -PTARGET_ABI=x86_64 -PCARGO_PROFILE=debug -PGO_PROFILE=release
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
