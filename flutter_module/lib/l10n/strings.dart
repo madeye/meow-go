@@ -84,6 +84,11 @@ class S {
   // Logs
   String get logs => 'Logs';
   String get noLogs => 'No logs yet';
+  String get logPause => 'Pause';
+  String get logResume => 'Resume';
+  String get copyAll => 'Copy All';
+  String get autoScroll => 'Auto-scroll';
+  String get clear => 'Clear';
 
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
@@ -177,6 +182,11 @@ class _Zh extends S {
   // Logs
   @override String get logs => '日志';
   @override String get noLogs => '暂无日志';
+  @override String get logPause => '暂停';
+  @override String get logResume => '继续';
+  @override String get copyAll => '复制全部';
+  @override String get autoScroll => '自动滚动';
+  @override String get clear => '清除';
 
   // Per-App Proxy
   @override String get perAppProxy => '分应用代理';
