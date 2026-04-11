@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app.dart' show profileChanged;
 import '../l10n/strings.dart';
 import '../services/vpn_channel.dart';
+import '../services/mihomo_api.dart';
 import '../models/vpn_state.dart';
 import '../models/traffic_stats.dart';
 import '../models/profile.dart';
@@ -32,8 +33,8 @@ class _HomeScreenState extends State<HomeScreen> {
     _stateSub = _vpn.stateStream.listen((s) {
       final wasConnected = _state == VpnState.connected;
       if (mounted) setState(() => _state = s);
-      if (!wasConnected && s == VpnState.connected && _selectedProxy != null && _profile != null) {
-        _vpn.selectProxyNode(_selectedProxy!, _profile!.yamlContent);
+      if (!wasConnected && s == VpnState.connected && _profile != null) {
+        _replaySelections(_profile!);
       }
     });
     _trafficSub = _vpn.trafficStream.listen((t) {
@@ -73,6 +74,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _toggling = false;
+
+  Future<void> _replaySelections(ClashProfile profile) async {
+    try {
+      final result = await MihomoApi.instance.getProxies();
+      await VpnChannel.replaySelectionsOnConnect(
+        result: result,
+        selections: profile.selectedProxies,
+      );
+    } catch (_) {
+      // Best-effort; VPN may not yet be fully started
+    }
+  }
 
   Future<void> _toggle(bool value) async {
     if (_toggling) return;
@@ -228,7 +241,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       setState(() => _selectedProxy = name);
                       if (_profile != null) {
                         _vpn.saveSelectedProxy(_profile!.id, name);
-                        _vpn.selectProxyNode(name, _profile!.yamlContent);
                       }
                     },
                   );
