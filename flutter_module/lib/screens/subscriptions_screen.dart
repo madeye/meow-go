@@ -4,6 +4,7 @@ import '../app.dart' show notifyProfileChanged;
 import '../l10n/strings.dart';
 import '../services/vpn_channel.dart';
 import '../models/profile.dart';
+import 'providers_screen.dart';
 import 'yaml_editor_screen.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
@@ -44,9 +45,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         await _load(notify: true);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       }
     }
@@ -59,13 +60,17 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
     if (result != null) {
       try {
-        await _vpn.updateSubscription(profile.id, result['name']!, result['url']!);
+        await _vpn.updateSubscription(
+          profile.id,
+          result['name']!,
+          result['url']!,
+        );
         await _load(notify: true);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: $e')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Error: $e')));
         }
       }
     }
@@ -79,8 +84,14 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         title: Text(s.deleteSubscription),
         content: Text(s.deleteConfirm(profile.name)),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(s.cancel)),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: Text(s.delete)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.delete),
+          ),
         ],
       ),
     );
@@ -96,16 +107,16 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
       await _load(notify: true);
       if (mounted) {
         final s = S.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.updated(profile.name))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(s.updated(profile.name))));
       }
     } catch (e) {
       if (mounted) {
         final s = S.of(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(s.refreshFailed(e.toString()))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(s.refreshFailed(e.toString()))));
       }
     }
   }
@@ -136,42 +147,52 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               await _load(notify: true);
             },
           ),
+          IconButton(
+            icon: const Icon(Icons.cloud_sync_outlined),
+            tooltip: s.providers,
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const ProvidersScreen())),
+          ),
           IconButton(icon: const Icon(Icons.add), onPressed: _addSubscription),
         ],
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _profiles.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.cloud_off, size: 64, color: Colors.white24),
-                      const SizedBox(height: 16),
-                      Text(s.noSubscriptions, style: const TextStyle(color: Colors.white38)),
-                      const SizedBox(height: 16),
-                      FilledButton.icon(
-                        onPressed: _addSubscription,
-                        icon: const Icon(Icons.add),
-                        label: Text(s.addSubscription),
-                      ),
-                    ],
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.cloud_off, size: 64, color: Colors.white24),
+                  const SizedBox(height: 16),
+                  Text(
+                    s.noSubscriptions,
+                    style: const TextStyle(color: Colors.white38),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.builder(
-                    itemCount: _profiles.length,
-                    itemBuilder: (_, i) => _ProfileTile(
-                      profile: _profiles[i],
-                      onSelect: () => _selectProfile(_profiles[i]),
-                      onEdit: () => _editSubscription(_profiles[i]),
-                      onDelete: () => _deleteSubscription(_profiles[i]),
-                      onRefresh: () => _refreshSubscription(_profiles[i]),
-                      onEditYaml: () => _editYaml(_profiles[i]),
-                    ),
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    onPressed: _addSubscription,
+                    icon: const Icon(Icons.add),
+                    label: Text(s.addSubscription),
                   ),
+                ],
+              ),
+            )
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView.builder(
+                itemCount: _profiles.length,
+                itemBuilder: (_, i) => _ProfileTile(
+                  profile: _profiles[i],
+                  onSelect: () => _selectProfile(_profiles[i]),
+                  onEdit: () => _editSubscription(_profiles[i]),
+                  onDelete: () => _deleteSubscription(_profiles[i]),
+                  onRefresh: () => _refreshSubscription(_profiles[i]),
+                  onEditYaml: () => _editYaml(_profiles[i]),
                 ),
+              ),
+            ),
     );
   }
 }
@@ -218,18 +239,29 @@ class _ProfileTileState extends State<_ProfileTile> {
               p.selected ? Icons.check_circle : Icons.circle_outlined,
               color: p.selected ? Colors.greenAccent : Colors.white38,
             ),
-            title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.w600)),
+            title: Text(
+              p.name,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (p.url.isNotEmpty)
-                  Text(p.url, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 12, color: Colors.white38)),
+                  Text(
+                    p.url,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: 12, color: Colors.white38),
+                  ),
                 if (updated != null)
-                  Text('Updated: ${updated.toLocal().toString().substring(0, 16)}',
-                      style: const TextStyle(fontSize: 11, color: Colors.white24)),
-                Text('${proxyNames.length} ${s.proxies}',
-                    style: const TextStyle(fontSize: 11, color: Colors.white24)),
+                  Text(
+                    'Updated: ${updated.toLocal().toString().substring(0, 16)}',
+                    style: const TextStyle(fontSize: 11, color: Colors.white24),
+                  ),
+                Text(
+                  '${proxyNames.length} ${s.proxies}',
+                  style: const TextStyle(fontSize: 11, color: Colors.white24),
+                ),
               ],
             ),
             trailing: Row(
@@ -237,17 +269,24 @@ class _ProfileTileState extends State<_ProfileTile> {
               children: [
                 if (proxyNames.isNotEmpty)
                   IconButton(
-                    icon: Icon(_expanded ? Icons.expand_less : Icons.expand_more),
+                    icon: Icon(
+                      _expanded ? Icons.expand_less : Icons.expand_more,
+                    ),
                     onPressed: () => setState(() => _expanded = !_expanded),
                   ),
                 PopupMenuButton<String>(
                   onSelected: (v) {
                     switch (v) {
-                      case 'select': widget.onSelect();
-                      case 'edit': widget.onEdit();
-                      case 'editYaml': widget.onEditYaml();
-                      case 'refresh': widget.onRefresh();
-                      case 'delete': widget.onDelete();
+                      case 'select':
+                        widget.onSelect();
+                      case 'edit':
+                        widget.onEdit();
+                      case 'editYaml':
+                        widget.onEditYaml();
+                      case 'refresh':
+                        widget.onRefresh();
+                      case 'delete':
+                        widget.onDelete();
                     }
                   },
                   itemBuilder: (_) => [
@@ -270,12 +309,14 @@ class _ProfileTileState extends State<_ProfileTile> {
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
               child: Column(
                 children: proxyNames
-                    .map((name) => ListTile(
-                          dense: true,
-                          leading: const Icon(Icons.vpn_key, size: 18),
-                          title: Text(name, style: const TextStyle(fontSize: 14)),
-                          visualDensity: VisualDensity.compact,
-                        ))
+                    .map(
+                      (name) => ListTile(
+                        dense: true,
+                        leading: const Icon(Icons.vpn_key, size: 18),
+                        title: Text(name, style: const TextStyle(fontSize: 14)),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    )
                     .toList(),
               ),
             ),
@@ -324,7 +365,10 @@ class _SubscriptionDialogState extends State<_SubscriptionDialog> {
         children: [
           TextField(
             controller: _nameCtrl,
-            decoration: InputDecoration(labelText: s.name, hintText: 'My Server'),
+            decoration: InputDecoration(
+              labelText: s.name,
+              hintText: 'My Server',
+            ),
           ),
           const SizedBox(height: 8),
           TextField(
@@ -344,7 +388,10 @@ class _SubscriptionDialogState extends State<_SubscriptionDialog> {
         FilledButton(
           onPressed: () {
             if (_nameCtrl.text.isEmpty || _urlCtrl.text.isEmpty) return;
-            Navigator.pop(context, {'name': _nameCtrl.text, 'url': _urlCtrl.text});
+            Navigator.pop(context, {
+              'name': _nameCtrl.text,
+              'url': _urlCtrl.text,
+            });
           },
           child: Text(isEdit ? s.save : s.add),
         ),
