@@ -51,11 +51,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _patch(Map<String, dynamic> patch) async {
-    try {
-      final patchFn =
-          widget.patchConfigsOverride ?? MihomoApi.instance.patchConfigs;
-      await patchFn(patch);
-    } catch (_) {}
+    final patchFn =
+        widget.patchConfigsOverride ?? MihomoApi.instance.patchConfigs;
+    await patchFn(patch);
   }
 
   @override
@@ -101,8 +99,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(s.allowLanDesc),
             value: _allowLan,
             onChanged: (v) {
+              final prev = _allowLan;
               setState(() => _allowLan = v);
-              _patch({'allow-lan': v});
+              _patch({'allow-lan': v}).catchError((_) {
+                if (mounted) setState(() => _allowLan = prev);
+              });
             },
           ),
           SwitchListTile(
@@ -112,8 +113,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(s.ipv6Desc),
             value: _ipv6,
             onChanged: (v) {
+              final prev = _ipv6;
               setState(() => _ipv6 = v);
-              _patch({'ipv6': v});
+              _patch({'ipv6': v}).catchError((_) {
+                if (mounted) setState(() => _ipv6 = prev);
+              });
             },
           ),
           _SectionHeader(s.network),
