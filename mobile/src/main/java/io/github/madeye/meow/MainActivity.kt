@@ -260,6 +260,40 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         val entries = PrivateDatabase.dailyTrafficDao.getAll()
                         result.success(entries.map { mapOf("date" to it.date, "tx" to it.tx, "rx" to it.rx) })
                     }
+                    "testDirectTcp" -> {
+                        val host = call.argument<String>("host") ?: "1.1.1.1"
+                        val port = call.argument<Int>("port") ?: 80
+                        scope.launch(Dispatchers.IO) {
+                            val msg = try {
+                                io.github.madeye.meow.core.MihomoEngine.nativeTestDirectTcp(host, port)
+                            } catch (e: Exception) {
+                                "FAIL ${e.message}"
+                            }
+                            withContext(Dispatchers.Main) { result.success(msg) }
+                        }
+                    }
+                    "testProxyHttp" -> {
+                        val url = call.argument<String>("url") ?: "http://www.gstatic.com/generate_204"
+                        scope.launch(Dispatchers.IO) {
+                            val msg = try {
+                                io.github.madeye.meow.core.MihomoEngine.nativeTestProxyHttp(url)
+                            } catch (e: Exception) {
+                                "FAIL ${e.message}"
+                            }
+                            withContext(Dispatchers.Main) { result.success(msg) }
+                        }
+                    }
+                    "testDnsResolver" -> {
+                        val addr = call.argument<String>("addr") ?: "127.0.0.1:1053"
+                        scope.launch(Dispatchers.IO) {
+                            val msg = try {
+                                io.github.madeye.meow.core.MihomoEngine.nativeTestDnsResolver(addr)
+                            } catch (e: Exception) {
+                                "FAIL ${e.message}"
+                            }
+                            withContext(Dispatchers.Main) { result.success(msg) }
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
