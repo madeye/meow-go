@@ -93,7 +93,7 @@ class MihomoApi {
     ));
     _assertOk(res, 'testGroupDelay');
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    return body.map((k, v) => MapEntry(k, v as int));
+    return body.map((k, v) => MapEntry(k, (v as num?)?.toInt() ?? 0));
   }
 
   // -------------------------------------------------------------------------
@@ -163,8 +163,11 @@ class MihomoApi {
     _assertOk(res, 'getProxyProviders');
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final raw = body['providers'] as Map<String, dynamic>? ?? {};
-    return raw.map((k, v) => MapEntry(
-        k, ProxyProvider.fromJson(k, v as Map<String, dynamic>)));
+    return {
+      for (final e in raw.entries)
+        if (e.value is Map<String, dynamic>)
+          e.key: ProxyProvider.fromJson(e.key, e.value as Map<String, dynamic>),
+    };
   }
 
   Future<void> updateProxyProvider(String name) async {
@@ -181,8 +184,11 @@ class MihomoApi {
     _assertOk(res, 'getRuleProviders');
     final body = jsonDecode(res.body) as Map<String, dynamic>;
     final raw = body['providers'] as Map<String, dynamic>? ?? {};
-    return raw.map((k, v) => MapEntry(
-        k, RuleProvider.fromJson(k, v as Map<String, dynamic>)));
+    return {
+      for (final e in raw.entries)
+        if (e.value is Map<String, dynamic>)
+          e.key: RuleProvider.fromJson(e.key, e.value as Map<String, dynamic>),
+    };
   }
 
   Future<void> updateRuleProvider(String name) async {
@@ -217,12 +223,14 @@ class MihomoApi {
   // -------------------------------------------------------------------------
 
   Stream<LogEntry> streamLogs({String level = 'info'}) => _streamJsonLines(
-        Uri.parse('ws://127.0.0.1:9090/logs?level=$level'),
+        Uri.parse(_kBaseUrl.replaceFirst('http', 'ws'))
+            .replace(path: '/logs', queryParameters: {'level': level}),
         LogEntry.fromJson,
       );
 
   Stream<MihomoTraffic> streamTraffic() => _streamJsonLines(
-        Uri.parse('ws://127.0.0.1:9090/traffic'),
+        Uri.parse(_kBaseUrl.replaceFirst('http', 'ws'))
+            .replace(path: '/traffic'),
         MihomoTraffic.fromJson,
       );
 
@@ -274,7 +282,7 @@ class MihomoApi {
     }
 
     controller = StreamController<T>(
-      onListen: () => connect(),
+      onListen: () { connect().catchError(controller.addError); },
       onCancel: () {
         cancelled = true;
         channel?.sink.close();
