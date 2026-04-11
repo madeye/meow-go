@@ -11,7 +11,8 @@ AVD="${AVD:-Medium_Phone_API_36.1}"
 APK="${APK:-$SCRIPT_DIR/mobile/build/outputs/apk/debug/mobile-arm64-v8a-debug.apk}"
 SSSERVER="${SSSERVER:-ssserver}"
 V2RAY_PLUGIN="${V2RAY_PLUGIN:-v2ray-plugin}"
-PKG="io.github.madeye.meow"
+PKG="io.github.madeye.meow.go"
+ACTIVITY="io.github.madeye.meow.MainActivity"
 
 SS_ADDR="0.0.0.0:8388"
 SS_PASSWORD="testpassword123"
@@ -182,7 +183,7 @@ info "APK installed."
 # Step 6: Configure subscription
 info "Step 6: Configuring subscription..."
 info "  Launching app to initialize databases..."
-"$ADB" shell am start -W -n "$PKG/.MainActivity"
+"$ADB" shell am start -W -n "$PKG/$ACTIVITY"
 sleep 8
 screenshot "01_init"
 "$ADB" shell am force-stop "$PKG"
@@ -239,7 +240,7 @@ ensure_emulator
 info "Step 7: Enabling VPN..."
 
 # Launch app with auto_connect=true intent extra — triggers VPN start once service reports Stopped
-"$ADB" shell am start -W -n "$PKG/.MainActivity" --ez auto_connect true
+"$ADB" shell am start -W -n "$PKG/$ACTIVITY" --ez auto_connect true
 
 # Wait for Flutter UI to load (splash screen takes several seconds)
 info "  Waiting for Flutter UI to render..."
