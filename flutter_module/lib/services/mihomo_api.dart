@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
-import '../models/proxy.dart';
 import '../models/proxy_group.dart';
 import '../models/rule.dart';
 import '../models/connection.dart';
@@ -247,7 +246,7 @@ class MihomoApi {
     if (!okCodes.contains(code)) throw MihomoApiException(label, code);
   }
 
-  /// WebSocket → Stream<T> with reconnect. Implemented in Task 6.
+  /// WebSocket → `Stream<T>` with reconnect. Implemented in Task 6.
   Stream<T> _streamJsonLines<T>(
     Uri uri,
     T Function(Map<String, dynamic>) fromJson,

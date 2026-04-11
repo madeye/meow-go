@@ -455,4 +455,16 @@ void main() {
       expect(captured!.url.path, '/group/MyGroup/delay');
     });
   });
+
+  group('MihomoApi stream types', () {
+    test('streamLogs returns Stream<LogEntry>', () {
+      final api = MihomoApi.withClient(http.Client());
+      expect(api.streamLogs(), isA<Stream<LogEntry>>());
+    });
+
+    test('streamTraffic returns Stream<MihomoTraffic>', () {
+      final api = MihomoApi.withClient(http.Client());
+      expect(api.streamTraffic(), isA<Stream<MihomoTraffic>>());
+    });
+  });
 }
