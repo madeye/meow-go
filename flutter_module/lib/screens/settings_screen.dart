@@ -1,13 +1,62 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../l10n/strings.dart';
+import '../models/runtime_config.dart';
+import '../services/mihomo_api.dart';
 import 'per_app_proxy_screen.dart';
 import 'logs_screen.dart';
 
-class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+typedef GetConfigsFn = Future<RuntimeConfig> Function();
+typedef PatchConfigsFn = Future<void> Function(Map<String, dynamic> patch);
 
+class SettingsScreen extends StatefulWidget {
+  // Test injection (null = use MihomoApi.instance)
+  final GetConfigsFn? getConfigsOverride;
+  final PatchConfigsFn? patchConfigsOverride;
+
+  const SettingsScreen({
+    super.key,
+    this.getConfigsOverride,
+    this.patchConfigsOverride,
+  });
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   static const _method = MethodChannel('io.github.madeye.meow/vpn');
+
+  bool _allowLan = false;
+  bool _ipv6 = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConfig();
+  }
+
+  Future<void> _loadConfig() async {
+    try {
+      final getConfigs =
+          widget.getConfigsOverride ?? MihomoApi.instance.getConfigs;
+      final config = await getConfigs();
+      if (mounted) {
+        setState(() {
+          _allowLan = config.allowLan;
+          _ipv6 = config.ipv6;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _patch(Map<String, dynamic> patch) async {
+    try {
+      final patchFn =
+          widget.patchConfigsOverride ?? MihomoApi.instance.patchConfigs;
+      await patchFn(patch);
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +92,29 @@ class SettingsScreen extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (_) => const LogsScreen()),
             ),
+          ),
+          _SectionHeader(s.runtimeConfig),
+          SwitchListTile(
+            key: const Key('switch_allow_lan'),
+            secondary: const Icon(Icons.lan_outlined),
+            title: Text(s.allowLan),
+            subtitle: Text(s.allowLanDesc),
+            value: _allowLan,
+            onChanged: (v) {
+              setState(() => _allowLan = v);
+              _patch({'allow-lan': v});
+            },
+          ),
+          SwitchListTile(
+            key: const Key('switch_ipv6'),
+            secondary: const Icon(Icons.travel_explore),
+            title: Text(s.ipv6),
+            subtitle: Text(s.ipv6Desc),
+            value: _ipv6,
+            onChanged: (v) {
+              setState(() => _ipv6 = v);
+              _patch({'ipv6': v});
+            },
           ),
           _SectionHeader(s.network),
           ListTile(
