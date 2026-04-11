@@ -247,7 +247,6 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         DataStore.perAppPackages = packages
                         result.success(null)
                     }
-                    "getLogs" -> result.success(emptyList<String>()) // TODO: implement log polling
                     "getTrafficHistory" -> {
                         val cutoff = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -31) }
                         val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)

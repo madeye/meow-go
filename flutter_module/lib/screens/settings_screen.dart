@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../l10n/strings.dart';
 import 'per_app_proxy_screen.dart';
+import 'logs_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -32,6 +33,15 @@ class SettingsScreen extends StatelessWidget {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const PerAppProxyScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.article_outlined),
+            title: Text(s.logs),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const LogsScreen()),
             ),
           ),
           _SectionHeader(s.network),
