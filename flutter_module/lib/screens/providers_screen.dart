@@ -161,8 +161,11 @@ class _ProxyProviderTileState extends State<_ProxyProviderTile> {
     setState(() => _updating = true);
     try {
       await widget.onUpdate();
-    } catch (_) {}
-    if (mounted) setState(() => _updating = false);
+    } catch (_) {
+      // best-effort; ignore errors
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
   }
 
   @override
@@ -209,8 +212,11 @@ class _RuleProviderTileState extends State<_RuleProviderTile> {
     setState(() => _updating = true);
     try {
       await widget.onUpdate();
-    } catch (_) {}
-    if (mounted) setState(() => _updating = false);
+    } catch (_) {
+      // best-effort; ignore errors
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
   }
 
   @override
