@@ -29,7 +29,7 @@ class _ModeCardState extends State<ModeCard> {
   @override
   void initState() {
     super.initState();
-    _loadConfig();
+    if (widget.isVpnConnected) _loadConfig();
   }
 
   @override
