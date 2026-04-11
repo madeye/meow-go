@@ -369,6 +369,7 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         "tx" to tx.toInt(),
         "rx" to rx.toInt(),
         "selectedProxy" to selectedProxy,
+        "selectedProxies" to selectedProxies,
         "yamlBackup" to yamlBackup,
     )
 }
