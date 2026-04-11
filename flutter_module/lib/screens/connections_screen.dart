@@ -24,6 +24,7 @@ class _ConnectionsScreenState extends State<ConnectionsScreen>
     with WidgetsBindingObserver {
   List<Connection> _connections = [];
   String _filter = '';
+  final Set<String> _dismissedIds = {};
   Timer? _timer;
 
   @override
@@ -64,7 +65,13 @@ class _ConnectionsScreenState extends State<ConnectionsScreen>
           widget.getConnectionsOverride ?? MihomoApi.instance.getConnections;
       final snapshot = await getConns();
       if (mounted) {
-        setState(() => _connections = snapshot.connections);
+        setState(() {
+          final serverIds = snapshot.connections.map((c) => c.id).toSet();
+          _dismissedIds.removeWhere((id) => !serverIds.contains(id));
+          _connections = snapshot.connections
+              .where((c) => !_dismissedIds.contains(c.id))
+              .toList();
+        });
       }
     } catch (_) {}
   }
@@ -74,7 +81,10 @@ class _ConnectionsScreenState extends State<ConnectionsScreen>
       final close =
           widget.closeConnectionOverride ?? MihomoApi.instance.closeConnection;
       await close(id);
-      setState(() => _connections.removeWhere((c) => c.id == id));
+      setState(() {
+        _dismissedIds.add(id);
+        _connections.removeWhere((c) => c.id == id);
+      });
     } catch (_) {}
   }
 
@@ -109,9 +119,12 @@ class _ConnectionsScreenState extends State<ConnectionsScreen>
   List<Connection> get _filtered {
     if (_filter.isEmpty) return _connections;
     final q = _filter.toLowerCase();
-    return _connections
-        .where((c) => c.metadata.host.toLowerCase().contains(q))
-        .toList();
+    return _connections.where((c) {
+      final displayHost = c.metadata.host.isNotEmpty
+          ? c.metadata.host
+          : c.metadata.destinationIP;
+      return displayHost.toLowerCase().contains(q);
+    }).toList();
   }
 
   @override
