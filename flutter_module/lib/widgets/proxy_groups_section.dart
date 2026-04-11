@@ -13,6 +13,12 @@ class ProxyGroupsSection extends StatefulWidget {
   final Map<String, String> initialSelections;
   final void Function(Map<String, String>) onSelectionsChanged;
 
+  /// YAML to parse when the embedded engine isn't reachable (VPN off or
+  /// first run before the engine has ever started). Gives the user a
+  /// read-only view of the group/member structure from the selected
+  /// profile. Ignored when the live /proxies call succeeds.
+  final String? fallbackYamlContent;
+
   // Test injection (null = use MihomoApi.instance)
   final GetProxiesFn? getProxiesOverride;
   final SelectProxyFn? selectProxyOverride;
@@ -23,6 +29,7 @@ class ProxyGroupsSection extends StatefulWidget {
     required this.isVpnConnected,
     required this.initialSelections,
     required this.onSelectionsChanged,
+    this.fallbackYamlContent,
     this.getProxiesOverride,
     this.selectProxyOverride,
     this.testGroupDelayOverride,
@@ -50,7 +57,18 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
   @override
   void didUpdateWidget(ProxyGroupsSection old) {
     super.didUpdateWidget(old);
+    // Refresh live data when VPN flips on.
     if (old.isVpnConnected != widget.isVpnConnected && widget.isVpnConnected) {
+      _load();
+      return;
+    }
+    // Retry if the fallback YAML became available after our initial load.
+    // HomeScreen loads the selected profile asynchronously, so on first
+    // build fallbackYamlContent is null; when it populates, we want to
+    // parse it for the offline display.
+    final oldYaml = old.fallbackYamlContent ?? '';
+    final newYaml = widget.fallbackYamlContent ?? '';
+    if (_result == null && oldYaml != newYaml && newYaml.isNotEmpty) {
       _load();
     }
   }
@@ -74,6 +92,20 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
         }
       });
     } catch (_) {
+      // Engine unreachable (typically VPN off). Fall back to parsing the
+      // selected profile YAML so users still see their group structure.
+      final fallback = widget.fallbackYamlContent;
+      if (fallback != null && fallback.isNotEmpty) {
+        final parsed = ProxiesResult.fromYaml(fallback);
+        if (mounted && parsed.groups.isNotEmpty) {
+          setState(() {
+            _result = parsed;
+            for (final g in parsed.groups.values) {
+              _selections.putIfAbsent(g.name, () => g.now);
+            }
+          });
+        }
+      }
       if (mounted) setState(() {});
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -84,6 +116,12 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
     final prev = _selections[group];
     setState(() => _selections[group] = name);
     widget.onSelectionsChanged(Map.from(_selections));
+
+    // When VPN is off the engine isn't running — no live call to make.
+    // The selection is persisted via onSelectionsChanged and will be
+    // replayed to the engine on the next VPN connect.
+    if (!widget.isVpnConnected) return;
+
     try {
       final selectProxy = widget.selectProxyOverride ?? MihomoApi.instance.selectProxy;
       await selectProxy(group, name);
@@ -179,7 +217,7 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
             expanded: _expanded[group.name] ?? false,
             testing: _testing[group.name] ?? false,
             onExpand: (v) => setState(() => _expanded[group.name] = v),
-            onSelect: widget.isVpnConnected ? (name) => _selectProxy(group.name, name) : null,
+            onSelect: (name) => _selectProxy(group.name, name),
             onTest: widget.isVpnConnected ? () => _testGroupDelay(group.name) : null,
             latencyColor: _latencyColor,
             typeBadgeColor: _typeBadgeColor,

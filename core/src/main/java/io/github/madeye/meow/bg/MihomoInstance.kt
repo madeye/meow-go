@@ -15,6 +15,12 @@ class MihomoInstance(val profile: ClashProfile) {
     private var lastUpdate: Long = 0
 
     fun start(configDir: File, vpnService: android.net.VpnService) {
+        // Seed the mihomo home dir with bundled GeoX files so the engine
+        // doesn't have to download them on first start. Each file is only
+        // copied if it doesn't already exist — users who've run an auto-
+        // update or who have newer data on disk keep their version.
+        copyGeoxAssets(vpnService, configDir)
+
         val configFile = File(configDir, "config.yaml")
         // Strip sections handled by the app, not mihomo:
         // - subscriptions: refresh is done by the app
@@ -27,6 +33,7 @@ class MihomoInstance(val profile: ClashProfile) {
             .replace(Regex("(?m)^socks-port:.*\n?"), "")
             .replace(Regex("(?m)^mixed-port:.*\n?"), "")
             .let { "mixed-port: 7890\n$it" }
+            .let { injectGeoxUrl(it) }
         configFile.writeText(yaml)
         MihomoEngine.nativeSetHomeDir(configDir.absolutePath)
         // The Rust tun2socks side also needs the home dir so its DoH
@@ -61,6 +68,53 @@ class MihomoInstance(val profile: ClashProfile) {
         MihomoEngine.nativeStopEngine()
         MihomoEngine.nativeSetProtect(null)
         Timber.d("MihomoInstance: engine stopped")
+    }
+
+    // Copy bundled GeoX data (geoip.metadb, geosite.dat, country.mmdb,
+    // GeoLite2-ASN.mmdb) from assets/geox into the mihomo home dir on
+    // first start. Files that already exist are left alone so the user
+    // can update them via mihomo's auto-update path without us clobbering
+    // the newer copy every connect.
+    private fun copyGeoxAssets(context: android.content.Context, configDir: File) {
+        val files = listOf(
+            "geoip.metadb",
+            "geosite.dat",
+            "country.mmdb",
+            "GeoLite2-ASN.mmdb",
+        )
+        for (name in files) {
+            val target = File(configDir, name)
+            if (target.exists() && target.length() > 0) continue
+            try {
+                context.assets.open("geox/$name").use { input ->
+                    target.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                Timber.d("MihomoInstance: seeded $name from assets (${target.length()} bytes)")
+            } catch (e: Exception) {
+                Timber.w(e, "MihomoInstance: failed to seed $name from assets")
+            }
+        }
+    }
+
+    // Force mihomo's GeoIP/Geosite download URLs to a jsDelivr-backed CDN.
+    // The upstream defaults point at github.com/MetaCubeX/meta-rules-dat
+    // release assets, which fail in regions where github is unreachable
+    // (e.g. China on first connect). jsDelivr mirrors the repo's `release`
+    // branch, which contains the same files as the releases. Only inject
+    // when the user hasn't already set their own geox-url block.
+    private fun injectGeoxUrl(yaml: String): String {
+        if (Regex("(?m)^geox-url:").containsMatchIn(yaml)) return yaml
+        val base = "https://cdn.jsdelivr.net/gh/MetaCubeX/meta-rules-dat@release"
+        val block = buildString {
+            appendLine("geox-url:")
+            appendLine("  geoip: \"$base/geoip.metadb\"")
+            appendLine("  geosite: \"$base/geosite.dat\"")
+            appendLine("  mmdb: \"$base/country.mmdb\"")
+            appendLine("  asn: \"$base/GeoLite2-ASN.mmdb\"")
+        }
+        return block + yaml
     }
 
     fun requestTrafficUpdate(): TrafficStats {
