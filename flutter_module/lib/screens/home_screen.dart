@@ -8,6 +8,7 @@ import '../models/vpn_state.dart';
 import '../models/traffic_stats.dart';
 import '../models/profile.dart';
 import '../widgets/proxy_groups_section.dart';
+import 'connections_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -130,6 +131,16 @@ class _HomeScreenState extends State<HomeScreen> {
             pinned: true,
             title: Text(s.appName),
             actions: [
+              if (isOn)
+                IconButton(
+                  icon: const Icon(Icons.device_hub),
+                  tooltip: S.of(context).connections,
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ConnectionsScreen(),
+                    ),
+                  ),
+                ),
               AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: isTransitioning
