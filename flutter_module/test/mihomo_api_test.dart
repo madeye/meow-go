@@ -454,6 +454,18 @@ void main() {
       expect(delays['proxy1'], 100);
       expect(captured!.url.path, '/group/MyGroup/delay');
     });
+
+    test('getProxy wraps single entry in ProxiesResult', () async {
+      final client = MockClient((req) async {
+        expect(req.url.path, '/proxies/proxy1');
+        return http.Response(
+          jsonEncode({'type': 'Shadowsocks', 'history': []}),
+          200,
+        );
+      });
+      final result = await MihomoApi.withClient(client).getProxy('proxy1');
+      expect(result.proxies.containsKey('proxy1'), isTrue);
+    });
   });
 
   group('MihomoApi stream types', () {

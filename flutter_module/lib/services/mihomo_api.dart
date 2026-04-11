@@ -123,14 +123,16 @@ class MihomoApi {
   Future<void> closeAllConnections() async {
     final req = http.Request('DELETE', _uri('/connections'));
     final streamed = await _client.send(req);
+    await streamed.stream.drain<void>();
     _assertOkCode(streamed.statusCode, 'closeAllConnections',
         okCodes: {200, 204});
   }
 
   Future<void> closeConnection(String id) async {
-    final req = http.Request(
-        'DELETE', _uri('/connections/${Uri.encodeComponent(id)}'));
+    final req =
+        http.Request('DELETE', _uri('/connections/${Uri.encodeComponent(id)}'));
     final streamed = await _client.send(req);
+    await streamed.stream.drain<void>();
     _assertOkCode(streamed.statusCode, 'closeConnection', okCodes: {200, 204});
   }
 
