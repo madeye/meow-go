@@ -55,8 +55,8 @@ class VpnChannel {
   Future<void> addSubscription(String name, String url) =>
       _method.invokeMethod('addSubscription', {'name': name, 'url': url});
 
-  Future<void> updateSubscription(int id, String name, String url) =>
-      _method.invokeMethod('updateSubscription', {'id': id, 'name': name, 'url': url});
+  Future<void> updateSubscription(int id, String name, String url) => _method
+      .invokeMethod('updateSubscription', {'id': id, 'name': name, 'url': url});
 
   Future<void> deleteSubscription(int id) =>
       _method.invokeMethod('deleteSubscription', {'id': id});
@@ -69,21 +69,25 @@ class VpnChannel {
 
   Future<void> refreshAll() => _method.invokeMethod('refreshAll');
 
-  Future<void> saveSelectedProxy(int profileId, String proxyName) =>
-      _method.invokeMethod('saveSelectedProxy', {'id': profileId, 'proxyName': proxyName});
-
   /// Persist per-group selections as a JSON map in Room.
-  Future<void> saveSelectedProxies(int profileId, Map<String, String> selections) =>
-      _method.invokeMethod('saveSelectedProxies', {
-        'id': profileId,
-        'proxiesJson': json.encode(selections),
-      });
+  Future<void> saveSelectedProxies(
+    int profileId,
+    Map<String, String> selections,
+  ) => _method.invokeMethod('saveSelectedProxies', {
+    'id': profileId,
+    'proxiesJson': json.encode(selections),
+  });
 
   Future<void> updateProfileYaml(int id, String yamlContent) =>
-      _method.invokeMethod('updateProfileYaml', {'id': id, 'yamlContent': yamlContent});
+      _method.invokeMethod('updateProfileYaml', {
+        'id': id,
+        'yamlContent': yamlContent,
+      });
 
   Future<String> revertProfileYaml(int id) async {
-    final result = await _method.invokeMethod<String>('revertProfileYaml', {'id': id});
+    final result = await _method.invokeMethod<String>('revertProfileYaml', {
+      'id': id,
+    });
     return result ?? '';
   }
 
@@ -98,7 +102,9 @@ class VpnChannel {
   }
 
   Future<Uint8List?> getAppIcon(String packageName) async {
-    return await _method.invokeMethod<Uint8List>('getAppIcon', {'packageName': packageName});
+    return await _method.invokeMethod<Uint8List>('getAppIcon', {
+      'packageName': packageName,
+    });
   }
 
   Future<Map<String, dynamic>> getPerAppConfig() async {

@@ -90,6 +90,9 @@ class S {
   String get about => 'About';
   String get sourceCode => 'Source Code';
   String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+  String get memoryUsage => 'Memory Usage';
+  String memoryStats(int inuse, int limit) =>
+      '${(inuse / 1048576).toStringAsFixed(1)} MB / ${(limit / 1048576).toStringAsFixed(1)} MB';
 
   // Logs
   String get logs => 'Logs';
@@ -131,13 +134,17 @@ class S {
   // Diagnostics
   String get diagnostics => 'Diagnostics';
   String get diagDirectTcp => 'Direct TCP';
-  String get diagDirectTcpDesc => 'TCP connect to 1.1.1.1:80 bypassing the proxy';
+  String get diagDirectTcpDesc =>
+      'TCP connect to 1.1.1.1:80 bypassing the proxy';
   String get diagProxyHttp => 'Proxy HTTP';
-  String get diagProxyHttpDesc => 'HTTP GET via local mihomo proxy (127.0.0.1:7890)';
+  String get diagProxyHttpDesc =>
+      'HTTP GET via local mihomo proxy (127.0.0.1:7890)';
   String get diagDnsResolver => 'DNS Resolver';
-  String get diagDnsResolverDesc => 'DNS lookup via tun2socks DoH (127.0.0.1:1053)';
+  String get diagDnsResolverDesc =>
+      'DNS lookup via tun2socks DoH (127.0.0.1:1053)';
   String get diagDnsQuery => 'DNS Query';
-  String get diagDnsQueryDesc => 'Live DNS query via mihomo engine for example.com';
+  String get diagDnsQueryDesc =>
+      'Live DNS query via mihomo engine for example.com';
   String get diagRun => 'Run';
   String get diagRunning => 'Running...';
   String get diagNotRun => '—';
@@ -320,6 +327,11 @@ class _Zh extends S {
   String get sourceCode => '源代码';
   @override
   String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+  @override
+  String get memoryUsage => '内存使用';
+  @override
+  String memoryStats(int inuse, int limit) =>
+      '${(inuse / 1048576).toStringAsFixed(1)} MB / ${(limit / 1048576).toStringAsFixed(1)} MB';
 
   // Logs
   @override
@@ -384,29 +396,50 @@ class _Zh extends S {
   String get rulesLoadError => '加载规则失败';
 
   // Diagnostics
-  @override String get diagnostics => '诊断';
-  @override String get diagDirectTcp => '直连 TCP';
-  @override String get diagDirectTcpDesc => '直接 TCP 连接至 1.1.1.1:80（绕过代理）';
-  @override String get diagProxyHttp => '代理 HTTP';
-  @override String get diagProxyHttpDesc => '通过本地 mihomo 代理（127.0.0.1:7890）发起 HTTP 请求';
-  @override String get diagDnsResolver => 'DNS 解析器';
-  @override String get diagDnsResolverDesc => '通过 tun2socks DoH（127.0.0.1:1053）进行 DNS 查询';
-  @override String get diagDnsQuery => 'DNS 查询';
-  @override String get diagDnsQueryDesc => '通过 mihomo 引擎对 example.com 进行实时 DNS 查询';
-  @override String get diagRun => '运行';
-  @override String get diagRunning => '运行中...';
-  @override String get diagNotRun => '—';
+  @override
+  String get diagnostics => '诊断';
+  @override
+  String get diagDirectTcp => '直连 TCP';
+  @override
+  String get diagDirectTcpDesc => '直接 TCP 连接至 1.1.1.1:80（绕过代理）';
+  @override
+  String get diagProxyHttp => '代理 HTTP';
+  @override
+  String get diagProxyHttpDesc => '通过本地 mihomo 代理（127.0.0.1:7890）发起 HTTP 请求';
+  @override
+  String get diagDnsResolver => 'DNS 解析器';
+  @override
+  String get diagDnsResolverDesc => '通过 tun2socks DoH（127.0.0.1:1053）进行 DNS 查询';
+  @override
+  String get diagDnsQuery => 'DNS 查询';
+  @override
+  String get diagDnsQueryDesc => '通过 mihomo 引擎对 example.com 进行实时 DNS 查询';
+  @override
+  String get diagRun => '运行';
+  @override
+  String get diagRunning => '运行中...';
+  @override
+  String get diagNotRun => '—';
 
   // Providers
-  @override String get providers => '提供者';
-  @override String get proxyProviders => '代理提供者';
-  @override String get ruleProviders => '规则提供者';
-  @override String get noProviders => '未配置提供者';
-  @override String get update => '更新';
-  @override String get updating => '更新中...';
-  @override String providerProxyCount(int n) => '$n 个节点';
-  @override String providerRuleCount(int n) => '$n 条规则';
-  @override String get providerUpdated => '已更新';
+  @override
+  String get providers => '提供者';
+  @override
+  String get proxyProviders => '代理提供者';
+  @override
+  String get ruleProviders => '规则提供者';
+  @override
+  String get noProviders => '未配置提供者';
+  @override
+  String get update => '更新';
+  @override
+  String get updating => '更新中...';
+  @override
+  String providerProxyCount(int n) => '$n 个节点';
+  @override
+  String providerRuleCount(int n) => '$n 条规则';
+  @override
+  String get providerUpdated => '已更新';
 
   // Per-App Proxy
   @override

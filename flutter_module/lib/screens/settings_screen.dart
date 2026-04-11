@@ -30,11 +30,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   bool _allowLan = false;
   bool _ipv6 = false;
+  String? _version;
+  int? _memInuse;
+  int? _memOsLimit;
 
   @override
   void initState() {
     super.initState();
     _loadConfig();
+    _loadMeta();
+  }
+
+  Future<void> _loadMeta() async {
+    // Version
+    try {
+      final v = await _method.invokeMethod<String>('getVersion');
+      if (mounted) setState(() => _version = v);
+    } catch (_) {}
+    // Memory (only available when VPN is connected)
+    try {
+      final mem = await MihomoApi.instance.getMemory();
+      if (mounted) {
+        setState(() {
+          _memInuse = mem.inuse;
+          _memOsLimit = mem.oslimit;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadConfig() async {
@@ -68,10 +90,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(s.version),
-            subtitle: FutureBuilder<String?>(
-              future: _method.invokeMethod<String>('getVersion'),
-              builder: (_, snap) => Text(snap.data ?? 'Loading...'),
-            ),
+            subtitle: Text(_version ?? 'Loading...'),
           ),
           ListTile(
             leading: const Icon(Icons.apps),
@@ -147,6 +166,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: Text(s.apiAddr),
           ),
           _SectionHeader(s.about),
+          if (_memInuse != null && _memOsLimit != null)
+            ListTile(
+              leading: const Icon(Icons.memory),
+              title: Text(s.memoryUsage),
+              subtitle: Text(s.memoryStats(_memInuse!, _memOsLimit!)),
+            ),
           ListTile(
             leading: const Icon(Icons.code),
             title: Text(s.sourceCode),
