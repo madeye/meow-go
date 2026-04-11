@@ -143,6 +143,12 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
                         result.success(null)
                     }
+                    "saveSelectedProxies" -> {
+                        val id = call.argument<Int>("id")?.toLong() ?: 0L
+                        val proxiesJson = call.argument<String>("proxiesJson") ?: "{}"
+                        PrivateDatabase.profileDao.updateSelectedProxies(id, proxiesJson)
+                        result.success(null)
+                    }
                     "updateProfileYaml" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         val yaml = call.argument<String>("yamlContent") ?: ""
