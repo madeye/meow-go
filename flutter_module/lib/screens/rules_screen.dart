@@ -16,6 +16,7 @@ class _RulesScreenState extends State<RulesScreen> {
   List<Rule> _rules = [];
   String _filter = '';
   bool _loaded = false;
+  bool _error = false;
 
   @override
   void initState() {
@@ -34,7 +35,11 @@ class _RulesScreenState extends State<RulesScreen> {
         });
       }
     } catch (_) {
-      if (mounted) setState(() => _loaded = true);
+      if (mounted)
+        setState(() {
+          _loaded = true;
+          _error = true;
+        });
     }
   }
 
@@ -80,6 +85,13 @@ class _RulesScreenState extends State<RulesScreen> {
       ),
       body: !_loaded
           ? const Center(child: CircularProgressIndicator())
+          : _error
+          ? Center(
+              child: Text(
+                s.rulesLoadError,
+                style: const TextStyle(color: Colors.white38),
+              ),
+            )
           : items.isEmpty
           ? Center(
               child: Text(

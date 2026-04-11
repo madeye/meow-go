@@ -37,6 +37,10 @@ void main() {
       expect(find.text('google.com'), findsOneWidget);
       expect(find.text('8.8.8.8/32'), findsOneWidget);
       expect(find.text('youtube.com'), findsOneWidget);
+      expect(
+        find.text('—'),
+        findsOneWidget,
+      ); // MATCH rule empty-payload sentinel
     });
 
     testWidgets('shows rule count in AppBar title after load', (tester) async {
@@ -96,6 +100,21 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('MATCH'), findsOneWidget);
+      expect(find.text('—'), findsOneWidget);
+    });
+
+    testWidgets('shows error message when getRules throws', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          RulesScreen(
+            getRulesOverride: () async => throw Exception('network error'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Failed to load rules'), findsOneWidget);
+      expect(find.textContaining('No rules found'), findsNothing);
     });
   });
 }
