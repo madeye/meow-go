@@ -215,6 +215,7 @@ class _HomeScreenState extends State<HomeScreen> {
             isVpnConnected: isOn,
             initialSelections: _selections,
             onSelectionsChanged: _onSelectionsChanged,
+            fallbackYamlContent: _profile?.yamlContent,
           ),
 
           const SliverPadding(padding: EdgeInsets.only(bottom: 16)),
