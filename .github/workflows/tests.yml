@@ -2,7 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, feature/flutter-refine]
   pull_request:
     branches: [master, main]
   workflow_dispatch:
