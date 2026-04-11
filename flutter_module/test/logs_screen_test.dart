@@ -128,5 +128,31 @@ void main() {
       expect(listView.semanticChildCount, lessThanOrEqualTo(1000));
       await controller.close();
     });
+
+    testWidgets('level change restarts stream with new level', (tester) async {
+      final levels = <String>[];
+      StreamController<LogEntry>? ctrl;
+
+      await tester.pumpWidget(_wrap(
+        LogsScreen(
+          streamLogsOverride: ({level = 'info'}) {
+            levels.add(level);
+            ctrl = StreamController<LogEntry>();
+            return ctrl!.stream;
+          },
+        ),
+      ));
+      await tester.pump();
+      expect(levels, ['info']); // initial subscription at info
+
+      // Open the dropdown and select Error
+      await tester.tap(find.byType(DropdownButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Error').last);
+      await tester.pumpAndSettle();
+
+      expect(levels.last, 'error');
+      await ctrl?.close();
+    });
   });
 }

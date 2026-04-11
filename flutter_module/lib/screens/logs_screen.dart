@@ -185,7 +185,8 @@ class _LogsScreenState extends State<LogsScreen> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              // ignore: deprecated_member_use
+              color: color.withOpacity(0.15),
               borderRadius: BorderRadius.circular(3),
             ),
             child: Text(
