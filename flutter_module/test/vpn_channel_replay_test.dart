@@ -39,6 +39,24 @@ void main() {
       expect(called['Proxy'], 'US01');
     });
 
+    test('skips groups whose first member resolves to REJECT', () async {
+      final called = <String, String>{};
+      final groups = <String, ProxyGroup>{
+        'Block': ProxyGroup(name: 'Block', type: 'Selector', now: 'REJECT', all: ['REJECT', 'HK01'], history: []),
+        'Proxy': ProxyGroup(name: 'Proxy', type: 'Selector', now: 'HK01', all: ['HK01', 'US01'], history: []),
+      };
+      final result = ProxiesResult(groups: groups, proxies: {});
+
+      await VpnChannel.replaySelectionsOnConnect(
+        result: result,
+        selections: {'Block': 'HK01', 'Proxy': 'US01'},
+        selectProxy: (group, name) async => called[group] = name,
+      );
+
+      expect(called.containsKey('Block'), isFalse);
+      expect(called['Proxy'], 'US01');
+    });
+
     test('skips selection if node not in group.all', () async {
       final called = <String, String>{};
       final groups = <String, ProxyGroup>{

@@ -63,14 +63,18 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _replaySelections() async {
-    if (_selections.isEmpty) return;
+    if (_selections.isEmpty || _replaying) return;
+    _replaying = true;
     try {
       final result = await MihomoApi.instance.getProxies();
       await VpnChannel.replaySelectionsOnConnect(
         result: result,
         selections: _selections,
       );
-    } catch (_) {}
+    } catch (_) {
+    } finally {
+      _replaying = false;
+    }
   }
 
   void _onSelectionsChanged(Map<String, String> selections) {
@@ -89,6 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   bool _toggling = false;
+  bool _replaying = false;
 
   Future<void> _toggle(bool value) async {
     if (_toggling) return;
