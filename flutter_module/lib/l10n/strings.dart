@@ -22,6 +22,14 @@ class S {
   String get download => 'Download';
   String get noSubscriptionHint => 'No subscription selected.\nGo to Subscribe tab to add one.';
 
+  // Proxy groups
+  String get proxyGroups => 'Proxy Groups';
+  String get urlTestAll => 'URL Test All';
+  String get testing => 'Testing...';
+  String get untested => '--';
+  String get noGroups => 'No proxy groups found.\nConnect VPN to load groups.';
+  String latencyMs(int ms) => '${ms}ms';
+
   // Subscriptions
   String get subscribe => 'Subscribe';
   String get subscriptions => 'Subscriptions';
@@ -119,6 +127,14 @@ class _Zh extends S {
   @override String get upload => '上传';
   @override String get download => '下载';
   @override String get noSubscriptionHint => '未选择订阅\n请前往订阅页面添加';
+
+  // Proxy groups
+  @override String get proxyGroups => '代理分组';
+  @override String get urlTestAll => '全部测速';
+  @override String get testing => '测速中...';
+  @override String get untested => '--';
+  @override String get noGroups => '未找到代理分组。\n连接 VPN 以加载分组。';
+  @override String latencyMs(int ms) => '${ms}ms';
 
   // Subscriptions
   @override String get subscribe => '订阅';
