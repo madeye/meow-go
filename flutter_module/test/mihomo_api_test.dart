@@ -4,6 +4,9 @@ import 'package:flutter_module/models/proxy_group.dart';
 import 'package:flutter_module/models/rule.dart';
 import 'package:flutter_module/models/connection.dart';
 import 'package:flutter_module/models/proxy_provider.dart';
+import 'package:flutter_module/models/log_entry.dart';
+import 'package:flutter_module/models/runtime_config.dart';
+import 'package:flutter_module/models/traffic.dart';
 
 void main() {
   group('Proxy.fromJson', () {
@@ -168,6 +171,79 @@ void main() {
       final rp = RuleProvider.fromJson('rprov1', json);
       expect(rp.ruleCount, 500);
       expect(rp.behavior, 'domain');
+    });
+  });
+
+  group('LogEntry.fromJson', () {
+    test('parses all fields', () {
+      final e = LogEntry.fromJson({
+        'type': 'INFO',
+        'payload': 'Started engine',
+        'time': '2024-01-01T00:00:00Z',
+      });
+      expect(e.type, 'INFO');
+      expect(e.payload, 'Started engine');
+      expect(e.time, '2024-01-01T00:00:00Z');
+    });
+
+    test('defaults missing fields to empty string', () {
+      final e = LogEntry.fromJson({});
+      expect(e.type, '');
+      expect(e.payload, '');
+    });
+  });
+
+  group('RuntimeConfig.fromJson', () {
+    test('parses mode and toggles', () {
+      final c = RuntimeConfig.fromJson({
+        'mode': 'rule',
+        'ipv6': true,
+        'allow-lan': false,
+        'log-level': 'info',
+        'mixed-port': 7890,
+        'external-controller': '127.0.0.1:9090',
+      });
+      expect(c.mode, 'rule');
+      expect(c.ipv6, isTrue);
+      expect(c.allowLan, isFalse);
+      expect(c.logLevel, 'info');
+      expect(c.mixedPort, 7890);
+    });
+  });
+
+  group('MemoryInfo.fromJson', () {
+    test('parses inuse and oslimit', () {
+      final m = MemoryInfo.fromJson({'inuse': 12345, 'oslimit': 999999});
+      expect(m.inuse, 12345);
+      expect(m.oslimit, 999999);
+    });
+  });
+
+  group('DnsQueryResult.fromJson', () {
+    test('parses answers', () {
+      final r = DnsQueryResult.fromJson({
+        'Answer': [
+          {'TTL': 300, 'data': '1.2.3.4', 'name': 'google.com.', 'type': 1},
+        ],
+        'Status': 0,
+      });
+      expect(r.status, 0);
+      expect(r.answers.length, 1);
+      expect(r.answers.first.data, '1.2.3.4');
+    });
+
+    test('handles null Answer field', () {
+      final r = DnsQueryResult.fromJson({'Status': 2});
+      expect(r.answers, isEmpty);
+      expect(r.status, 2);
+    });
+  });
+
+  group('MihomoTraffic.fromJson', () {
+    test('parses up and down', () {
+      final t = MihomoTraffic.fromJson({'up': 1024, 'down': 2048});
+      expect(t.up, 1024);
+      expect(t.down, 2048);
     });
   });
 }
