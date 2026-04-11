@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_module/models/proxy.dart';
 import 'package:flutter_module/models/proxy_group.dart';
@@ -7,6 +8,9 @@ import 'package:flutter_module/models/proxy_provider.dart';
 import 'package:flutter_module/models/log_entry.dart';
 import 'package:flutter_module/models/runtime_config.dart';
 import 'package:flutter_module/models/traffic.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
+import 'package:flutter_module/services/mihomo_api.dart';
 
 void main() {
   group('Proxy.fromJson', () {
@@ -244,6 +248,211 @@ void main() {
       final t = MihomoTraffic.fromJson({'up': 1024, 'down': 2048});
       expect(t.up, 1024);
       expect(t.down, 2048);
+    });
+  });
+
+  group('MihomoApi REST methods', () {
+    MihomoApi makeApi(Map<String, http.Response> responses) {
+      final client = MockClient((request) async {
+        final key = '${request.method} ${request.url.path}';
+        return responses[key] ?? http.Response('{"error":"not found"}', 404);
+      });
+      return MihomoApi.withClient(client);
+    }
+
+    test('getProxies returns ProxiesResult', () async {
+      final api = makeApi({
+        'GET /proxies': http.Response(
+          jsonEncode({
+            'proxies': {
+              'MyGroup': {
+                'type': 'Selector',
+                'now': 'proxy1',
+                'all': ['proxy1'],
+                'history': [],
+              },
+              'proxy1': {'type': 'Shadowsocks', 'history': []},
+            },
+          }),
+          200,
+        ),
+      });
+      final result = await api.getProxies();
+      expect(result.groups.containsKey('MyGroup'), isTrue);
+      expect(result.proxies.containsKey('proxy1'), isTrue);
+    });
+
+    test('selectProxy sends PUT with name body', () async {
+      http.Request? captured;
+      final client = MockClient((req) async {
+        captured = req;
+        return http.Response('', 204);
+      });
+      final api = MihomoApi.withClient(client);
+      await api.selectProxy('MyGroup', 'proxy1');
+      expect(captured!.method, 'PUT');
+      expect(captured!.url.path, '/proxies/MyGroup');
+      expect(jsonDecode(captured!.body)['name'], 'proxy1');
+    });
+
+    test('getRules returns list of Rule', () async {
+      final api = makeApi({
+        'GET /rules': http.Response(
+          jsonEncode({
+            'rules': [
+              {'type': 'DOMAIN-SUFFIX', 'payload': 'google.com', 'proxy': 'DIRECT'},
+            ],
+          }),
+          200,
+        ),
+      });
+      final rules = await api.getRules();
+      expect(rules.length, 1);
+      expect(rules.first.type, 'DOMAIN-SUFFIX');
+    });
+
+    test('getConnections returns ConnectionsSnapshot', () async {
+      final api = makeApi({
+        'GET /connections': http.Response(
+          jsonEncode({'downloadTotal': 100, 'uploadTotal': 50, 'connections': []}),
+          200,
+        ),
+      });
+      final snap = await api.getConnections();
+      expect(snap.downloadTotal, 100);
+      expect(snap.connections, isEmpty);
+    });
+
+    test('closeAllConnections sends DELETE /connections', () async {
+      http.BaseRequest? captured;
+      final client = MockClient((req) async {
+        captured = req;
+        return http.Response('', 204);
+      });
+      await MihomoApi.withClient(client).closeAllConnections();
+      expect(captured!.method, 'DELETE');
+      expect(captured!.url.path, '/connections');
+    });
+
+    test('closeConnection sends DELETE /connections/id', () async {
+      http.BaseRequest? captured;
+      final client = MockClient((req) async {
+        captured = req;
+        return http.Response('', 204);
+      });
+      await MihomoApi.withClient(client).closeConnection('abc123');
+      expect(captured!.method, 'DELETE');
+      expect(captured!.url.path, '/connections/abc123');
+    });
+
+    test('getConfigs returns RuntimeConfig', () async {
+      final api = makeApi({
+        'GET /configs': http.Response(
+          jsonEncode({
+            'mode': 'rule', 'ipv6': false, 'allow-lan': true,
+            'log-level': 'info', 'mixed-port': 7890,
+            'external-controller': '127.0.0.1:9090',
+          }),
+          200,
+        ),
+      });
+      final config = await api.getConfigs();
+      expect(config.mode, 'rule');
+      expect(config.allowLan, isTrue);
+    });
+
+    test('patchConfigs sends PATCH with body', () async {
+      http.Request? captured;
+      final client = MockClient((req) async {
+        captured = req;
+        return http.Response('', 204);
+      });
+      await MihomoApi.withClient(client).patchConfigs({'mode': 'global'});
+      expect(captured!.method, 'PATCH');
+      expect(captured!.url.path, '/configs');
+      expect(jsonDecode(captured!.body)['mode'], 'global');
+    });
+
+    test('getMemory returns MemoryInfo', () async {
+      final api = makeApi({
+        'GET /memory': http.Response(
+          jsonEncode({'inuse': 12345, 'oslimit': 999999}),
+          200,
+        ),
+      });
+      final mem = await api.getMemory();
+      expect(mem.inuse, 12345);
+    });
+
+    test('dnsQuery returns DnsQueryResult', () async {
+      final api = makeApi({
+        'GET /dns/query': http.Response(
+          jsonEncode({'Answer': [], 'Status': 0}),
+          200,
+        ),
+      });
+      final r = await api.dnsQuery('google.com');
+      expect(r.status, 0);
+    });
+
+    test('getProxyProviders returns map of ProxyProvider', () async {
+      final api = makeApi({
+        'GET /providers/proxies': http.Response(
+          jsonEncode({
+            'providers': {
+              'prov1': {
+                'name': 'prov1', 'type': 'HTTP', 'vehicleType': 'HTTP',
+                'updatedAt': '2024-01-01T00:00:00Z', 'proxies': [],
+              },
+            },
+          }),
+          200,
+        ),
+      });
+      final providers = await api.getProxyProviders();
+      expect(providers.containsKey('prov1'), isTrue);
+    });
+
+    test('getRuleProviders returns map of RuleProvider', () async {
+      final api = makeApi({
+        'GET /providers/rules': http.Response(
+          jsonEncode({
+            'providers': {
+              'rprov1': {
+                'name': 'rprov1', 'behavior': 'domain',
+                'type': 'HTTP', 'vehicleType': 'HTTP',
+                'updatedAt': '2024-01-01T00:00:00Z', 'ruleCount': 100,
+              },
+            },
+          }),
+          200,
+        ),
+      });
+      final providers = await api.getRuleProviders();
+      expect(providers['rprov1']?.ruleCount, 100);
+    });
+
+    test('testProxyDelay sends GET with url and timeout params', () async {
+      http.BaseRequest? captured;
+      final client = MockClient((req) async {
+        captured = req;
+        return http.Response(jsonEncode({'delay': 150}), 200);
+      });
+      final delay = await MihomoApi.withClient(client).testProxyDelay('proxy1');
+      expect(delay, 150);
+      expect(captured!.url.path, '/proxies/proxy1/delay');
+      expect(captured!.url.queryParameters['url'], isNotNull);
+    });
+
+    test('testGroupDelay returns map of name to delay', () async {
+      http.BaseRequest? captured;
+      final client = MockClient((req) async {
+        captured = req;
+        return http.Response(jsonEncode({'proxy1': 100, 'proxy2': 200}), 200);
+      });
+      final delays = await MihomoApi.withClient(client).testGroupDelay('MyGroup');
+      expect(delays['proxy1'], 100);
+      expect(captured!.url.path, '/group/MyGroup/delay');
     });
   });
 }
