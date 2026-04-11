@@ -81,7 +81,10 @@ val goAbis = listOf(
         extraLdFlags = listOf("-extldflags=-Wl,-z,max-page-size=16384"),
     ),
     GoAbi("x86", "x86", "386", "i686-linux-android21"),
-    GoAbi("x86_64", "x86_64", "amd64", "x86_64-linux-android21"),
+    GoAbi(
+        "x86_64", "x86_64", "amd64", "x86_64-linux-android21",
+        extraLdFlags = listOf("-extldflags=-Wl,-z,max-page-size=16384"),
+    ),
 )
 
 val goProfile = findProperty("GO_PROFILE")?.toString() ?: "debug"
