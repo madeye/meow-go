@@ -47,14 +47,17 @@ class _HomeScreenState extends State<HomeScreen> {
       final state = await _vpn.getState();
       final profile = await _vpn.getSelectedProfile();
       if (mounted) {
+        final changed = _profile?.id != profile?.id;
         setState(() {
           _state = state;
-          final changed = _profile?.id != profile?.id;
           _profile = profile;
           if (changed) {
             _selections = Map.from(profile?.selectedProxies ?? {});
           }
         });
+        if (changed && state == VpnState.connected) {
+          await _replaySelections();
+        }
       }
     } catch (_) {}
   }
