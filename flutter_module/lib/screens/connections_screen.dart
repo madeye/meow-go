@@ -98,7 +98,8 @@ class _ConnectionsScreenState extends State<ConnectionsScreen>
     );
     if (confirmed != true) return;
     try {
-      final closeAll = widget.closeAllConnectionsOverride ??
+      final closeAll =
+          widget.closeAllConnectionsOverride ??
           MihomoApi.instance.closeAllConnections;
       await closeAll();
       if (mounted) setState(() => _connections = []);
@@ -210,8 +211,9 @@ class _ConnectionTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final m = conn.metadata;
     final host = m.host.isNotEmpty ? m.host : m.destinationIP;
-    final hostPort =
-        m.destinationPort.isNotEmpty ? '$host:${m.destinationPort}' : host;
+    final hostPort = m.destinationPort.isNotEmpty
+        ? '$host:${m.destinationPort}'
+        : host;
     final duration = _formatDuration(conn.start);
     final chains = conn.chains;
 
@@ -229,25 +231,27 @@ class _ConnectionTile extends StatelessWidget {
             Semantics(
               label: chains.join(' → '),
               child: RichText(
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              text: TextSpan(
-                style: const TextStyle(fontSize: 11, color: Colors.white54),
-                children: [
-                  for (int i = 0; i < chains.length; i++) ...[
-                    if (i > 0) const TextSpan(text: ' → '),
-                    TextSpan(
-                      text: chains[i],
-                      style: i == chains.length - 1
-                          ? const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white70)
-                          : null,
-                    ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                text: TextSpan(
+                  style: const TextStyle(fontSize: 11, color: Colors.white54),
+                  children: [
+                    for (int i = 0; i < chains.length; i++) ...[
+                      if (i > 0) const TextSpan(text: ' → '),
+                      TextSpan(
+                        text: chains[i],
+                        style: i == chains.length - 1
+                            ? const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white70,
+                              )
+                            : null,
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
-            )),
+            ),
           if (conn.rule.isNotEmpty)
             Text(
               conn.rulePayload.isNotEmpty
