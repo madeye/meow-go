@@ -5,6 +5,7 @@ import '../models/runtime_config.dart';
 import '../services/mihomo_api.dart';
 import 'per_app_proxy_screen.dart';
 import 'logs_screen.dart';
+import 'diagnostics_screen.dart';
 
 typedef GetConfigsFn = Future<RuntimeConfig> Function();
 typedef PatchConfigsFn = Future<void> Function(Map<String, dynamic> patch);
@@ -89,6 +90,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onTap: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const LogsScreen()),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.monitor_heart_outlined),
+            title: Text(s.diagnostics),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DiagnosticsScreen()),
             ),
           ),
           _SectionHeader(s.runtimeConfig),
