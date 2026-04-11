@@ -288,16 +288,23 @@ class _GroupCard extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     if (testing)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        child: SizedBox(
-                          width: 14,
-                          height: 14,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(s.testing, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                          ],
                         ),
                       ),
                     IconButton(
-                      tooltip: 'URL Test All',
+                      tooltip: s.urlTestAll,
                       icon: const Icon(Icons.speed, size: 18),
                       onPressed: testing ? null : onTest,
                       padding: const EdgeInsets.all(4),
