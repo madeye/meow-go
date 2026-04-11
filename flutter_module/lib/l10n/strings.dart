@@ -128,6 +128,20 @@ class S {
   String rulesCount(int n) => '$n rules';
   String get rulesLoadError => 'Failed to load rules';
 
+  // Diagnostics
+  String get diagnostics => 'Diagnostics';
+  String get diagDirectTcp => 'Direct TCP';
+  String get diagDirectTcpDesc => 'TCP connect to 1.1.1.1:80 bypassing the proxy';
+  String get diagProxyHttp => 'Proxy HTTP';
+  String get diagProxyHttpDesc => 'HTTP GET via local mihomo proxy (127.0.0.1:7890)';
+  String get diagDnsResolver => 'DNS Resolver';
+  String get diagDnsResolverDesc => 'DNS lookup via tun2socks DoH (127.0.0.1:1053)';
+  String get diagDnsQuery => 'DNS Query';
+  String get diagDnsQueryDesc => 'Live DNS query via mihomo engine for example.com';
+  String get diagRun => 'Run';
+  String get diagRunning => 'Running...';
+  String get diagNotRun => '—';
+
   // Per-App Proxy
   String get perAppProxy => 'Per-App Proxy';
   String get perAppProxyDesc => 'Select which apps use the VPN';
@@ -357,6 +371,20 @@ class _Zh extends S {
   String rulesCount(int n) => '$n 条规则';
   @override
   String get rulesLoadError => '加载规则失败';
+
+  // Diagnostics
+  @override String get diagnostics => '诊断';
+  @override String get diagDirectTcp => '直连 TCP';
+  @override String get diagDirectTcpDesc => '直接 TCP 连接至 1.1.1.1:80（绕过代理）';
+  @override String get diagProxyHttp => '代理 HTTP';
+  @override String get diagProxyHttpDesc => '通过本地 mihomo 代理（127.0.0.1:7890）发起 HTTP 请求';
+  @override String get diagDnsResolver => 'DNS 解析器';
+  @override String get diagDnsResolverDesc => '通过 tun2socks DoH（127.0.0.1:1053）进行 DNS 查询';
+  @override String get diagDnsQuery => 'DNS 查询';
+  @override String get diagDnsQueryDesc => '通过 mihomo 引擎对 example.com 进行实时 DNS 查询';
+  @override String get diagRun => '运行';
+  @override String get diagRunning => '运行中...';
+  @override String get diagNotRun => '—';
 
   // Per-App Proxy
   @override
