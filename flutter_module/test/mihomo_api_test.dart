@@ -1,6 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_module/models/proxy.dart';
 import 'package:flutter_module/models/proxy_group.dart';
+import 'package:flutter_module/models/rule.dart';
+import 'package:flutter_module/models/connection.dart';
+import 'package:flutter_module/models/proxy_provider.dart';
 
 void main() {
   group('Proxy.fromJson', () {
@@ -80,6 +83,91 @@ void main() {
       expect(result.groups.keys, contains('GLOBAL'));
       expect(result.proxies.keys, containsAll(['DIRECT', 'proxy1']));
       expect(result.groups.containsKey('DIRECT'), isFalse);
+    });
+  });
+
+  group('Rule.fromJson', () {
+    test('parses all fields', () {
+      final r = Rule.fromJson({
+        'type': 'DOMAIN-SUFFIX',
+        'payload': 'google.com',
+        'proxy': 'DIRECT',
+        'size': 0,
+      });
+      expect(r.type, 'DOMAIN-SUFFIX');
+      expect(r.payload, 'google.com');
+      expect(r.proxy, 'DIRECT');
+    });
+  });
+
+  group('Connection.fromJson', () {
+    test('parses full connection', () {
+      final json = {
+        'id': 'abc123',
+        'metadata': {
+          'network': 'tcp', 'type': 'HTTP',
+          'sourceIP': '127.0.0.1', 'destinationIP': '1.1.1.1',
+          'sourcePort': '12345', 'destinationPort': '80',
+          'host': 'example.com', 'dnsMode': 'normal',
+          'processName': '', 'uid': 0,
+        },
+        'upload': 100, 'download': 200,
+        'start': '2024-01-01T00:00:00.000Z',
+        'chains': ['proxy1', 'DIRECT'],
+        'rule': 'DOMAIN-SUFFIX', 'rulePayload': 'example.com',
+      };
+      final c = Connection.fromJson(json);
+      expect(c.id, 'abc123');
+      expect(c.metadata.host, 'example.com');
+      expect(c.upload, 100);
+      expect(c.chains, ['proxy1', 'DIRECT']);
+      expect(c.rule, 'DOMAIN-SUFFIX');
+    });
+  });
+
+  group('ConnectionsSnapshot.fromJson', () {
+    test('parses totals and list', () {
+      final json = {
+        'downloadTotal': 9999,
+        'uploadTotal': 1111,
+        'connections': <dynamic>[],
+      };
+      final snap = ConnectionsSnapshot.fromJson(json);
+      expect(snap.downloadTotal, 9999);
+      expect(snap.connections, isEmpty);
+    });
+
+    test('handles null connections field', () {
+      final snap = ConnectionsSnapshot.fromJson({'downloadTotal': 0, 'uploadTotal': 0});
+      expect(snap.connections, isEmpty);
+    });
+  });
+
+  group('ProxyProvider.fromJson', () {
+    test('parses name and vehicleType', () {
+      final json = {
+        'name': 'prov1', 'type': 'HTTP', 'vehicleType': 'HTTP',
+        'updatedAt': '2024-01-01T00:00:00Z',
+        'proxies': <dynamic>[],
+        'subscriptionInfo': null,
+      };
+      final p = ProxyProvider.fromJson('prov1', json);
+      expect(p.name, 'prov1');
+      expect(p.vehicleType, 'HTTP');
+    });
+  });
+
+  group('RuleProvider.fromJson', () {
+    test('parses ruleCount', () {
+      final json = {
+        'name': 'rprov1', 'behavior': 'domain',
+        'type': 'HTTP', 'vehicleType': 'HTTP',
+        'updatedAt': '2024-01-01T00:00:00Z',
+        'ruleCount': 500,
+      };
+      final rp = RuleProvider.fromJson('rprov1', json);
+      expect(rp.ruleCount, 500);
+      expect(rp.behavior, 'domain');
     });
   });
 }
