@@ -226,9 +226,34 @@ class _ConnectionTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (chains.isNotEmpty)
+            Semantics(
+              label: chains.join(' → '),
+              child: RichText(
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              text: TextSpan(
+                style: const TextStyle(fontSize: 11, color: Colors.white54),
+                children: [
+                  for (int i = 0; i < chains.length; i++) ...[
+                    if (i > 0) const TextSpan(text: ' → '),
+                    TextSpan(
+                      text: chains[i],
+                      style: i == chains.length - 1
+                          ? const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white70)
+                          : null,
+                    ),
+                  ],
+                ],
+              ),
+            )),
+          if (conn.rule.isNotEmpty)
             Text(
-              chains.join(' → '),
-              style: const TextStyle(fontSize: 11, color: Colors.white70),
+              conn.rulePayload.isNotEmpty
+                  ? '${conn.rule}: ${conn.rulePayload}'
+                  : conn.rule,
+              style: const TextStyle(fontSize: 11, color: Colors.white38),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),

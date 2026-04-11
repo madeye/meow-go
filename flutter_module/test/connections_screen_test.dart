@@ -84,7 +84,7 @@ void main() {
       )));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('HK01'), findsWidgets);
+      expect(find.bySemanticsLabel(RegExp('HK01')), findsWidgets);
     });
 
     testWidgets('swipe to dismiss calls closeConnectionOverride with correct id', (tester) async {
@@ -138,7 +138,7 @@ void main() {
       await tester.pumpWidget(_wrap(ConnectionsScreen(
         getConnectionsOverride: () async => _snap([
           _makeConn(id: '1', host: 'example.com'),
-          _makeConn(id: '2', host: 'google.com'),
+          _makeConn(id: '2', host: 'google.com', rulePayload: 'google.com'),
         ]),
         closeConnectionOverride: (_) async {},
         closeAllConnectionsOverride: () async {},
