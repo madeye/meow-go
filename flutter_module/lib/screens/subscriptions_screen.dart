@@ -219,108 +219,68 @@ class _ProfileTile extends StatefulWidget {
 }
 
 class _ProfileTileState extends State<_ProfileTile> {
-  bool _expanded = false;
-
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
     final p = widget.profile;
-    final proxyNames = p.proxyNames;
     final updated = p.lastUpdated > 0
         ? DateTime.fromMillisecondsSinceEpoch(p.lastUpdated * 1000)
         : null;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Icon(
-              p.selected ? Icons.check_circle : Icons.circle_outlined,
-              color: p.selected ? Colors.greenAccent : Colors.white38,
-            ),
-            title: Text(
-              p.name,
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (p.url.isNotEmpty)
-                  Text(
-                    p.url,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Colors.white38),
-                  ),
-                if (updated != null)
-                  Text(
-                    'Updated: ${updated.toLocal().toString().substring(0, 16)}',
-                    style: const TextStyle(fontSize: 11, color: Colors.white24),
-                  ),
-                Text(
-                  '${proxyNames.length} ${s.proxies}',
-                  style: const TextStyle(fontSize: 11, color: Colors.white24),
-                ),
-              ],
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (proxyNames.isNotEmpty)
-                  IconButton(
-                    icon: Icon(
-                      _expanded ? Icons.expand_less : Icons.expand_more,
-                    ),
-                    onPressed: () => setState(() => _expanded = !_expanded),
-                  ),
-                PopupMenuButton<String>(
-                  onSelected: (v) {
-                    switch (v) {
-                      case 'select':
-                        widget.onSelect();
-                      case 'edit':
-                        widget.onEdit();
-                      case 'editYaml':
-                        widget.onEditYaml();
-                      case 'refresh':
-                        widget.onRefresh();
-                      case 'delete':
-                        widget.onDelete();
-                    }
-                  },
-                  itemBuilder: (_) => [
-                    if (!p.selected)
-                      PopupMenuItem(value: 'select', child: Text(s.select)),
-                    PopupMenuItem(value: 'edit', child: Text(s.edit)),
-                    if (p.yamlContent.isNotEmpty)
-                      PopupMenuItem(value: 'editYaml', child: Text(s.editYaml)),
-                    PopupMenuItem(value: 'refresh', child: Text(s.refresh)),
-                    PopupMenuItem(value: 'delete', child: Text(s.delete)),
-                  ],
-                ),
-              ],
-            ),
-            onTap: widget.onSelect,
-          ),
-          // Proxy nodes list (expanded)
-          if (_expanded && proxyNames.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.only(left: 16, right: 16, bottom: 8),
-              child: Column(
-                children: proxyNames
-                    .map(
-                      (name) => ListTile(
-                        dense: true,
-                        leading: const Icon(Icons.vpn_key, size: 18),
-                        title: Text(name, style: const TextStyle(fontSize: 14)),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    )
-                    .toList(),
+      child: ListTile(
+        leading: Icon(
+          p.selected ? Icons.check_circle : Icons.circle_outlined,
+          color: p.selected ? Colors.greenAccent : Colors.white38,
+        ),
+        title: Text(
+          p.name,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (p.url.isNotEmpty)
+              Text(
+                p.url,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Colors.white38),
               ),
-            ),
-        ],
+            if (updated != null)
+              Text(
+                'Updated: ${updated.toLocal().toString().substring(0, 16)}',
+                style: const TextStyle(fontSize: 11, color: Colors.white24),
+              ),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (v) {
+            switch (v) {
+              case 'select':
+                widget.onSelect();
+              case 'edit':
+                widget.onEdit();
+              case 'editYaml':
+                widget.onEditYaml();
+              case 'refresh':
+                widget.onRefresh();
+              case 'delete':
+                widget.onDelete();
+            }
+          },
+          itemBuilder: (_) => [
+            if (!p.selected)
+              PopupMenuItem(value: 'select', child: Text(s.select)),
+            PopupMenuItem(value: 'edit', child: Text(s.edit)),
+            if (p.yamlContent.isNotEmpty)
+              PopupMenuItem(value: 'editYaml', child: Text(s.editYaml)),
+            PopupMenuItem(value: 'refresh', child: Text(s.refresh)),
+            PopupMenuItem(value: 'delete', child: Text(s.delete)),
+          ],
+        ),
+        onTap: widget.onSelect,
       ),
     );
   }
