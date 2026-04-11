@@ -1,0 +1,85 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_module/models/proxy.dart';
+import 'package:flutter_module/models/proxy_group.dart';
+
+void main() {
+  group('Proxy.fromJson', () {
+    test('parses all fields', () {
+      final json = {
+        'name': 'proxy1',
+        'type': 'Shadowsocks',
+        'history': [
+          {'time': '2024-01-01T00:00:00Z', 'delay': 120, 'meanDelay': 115},
+        ],
+      };
+      final proxy = Proxy.fromJson('proxy1', json);
+      expect(proxy.name, 'proxy1');
+      expect(proxy.type, 'Shadowsocks');
+      expect(proxy.history.length, 1);
+      expect(proxy.history.first.delay, 120);
+    });
+
+    test('handles empty history', () {
+      final proxy = Proxy.fromJson('p', {'type': 'Direct', 'history': []});
+      expect(proxy.history, isEmpty);
+    });
+  });
+
+  group('ProxyHistory.fromJson', () {
+    test('parses delay', () {
+      final h = ProxyHistory.fromJson({'time': '2024-01-01T00:00:00Z', 'delay': 55, 'meanDelay': 50});
+      expect(h.delay, 55);
+    });
+
+    test('defaults delay to 0 when absent', () {
+      final h = ProxyHistory.fromJson({'time': '2024-01-01T00:00:00Z'});
+      expect(h.delay, 0);
+    });
+  });
+
+  group('ProxyGroup.fromJson', () {
+    test('parses selector group', () {
+      final json = {
+        'type': 'Selector',
+        'now': 'proxy1',
+        'all': ['proxy1', 'proxy2'],
+        'history': [],
+      };
+      final g = ProxyGroup.fromJson('MyGroup', json);
+      expect(g.name, 'MyGroup');
+      expect(g.type, 'Selector');
+      expect(g.now, 'proxy1');
+      expect(g.all, ['proxy1', 'proxy2']);
+    });
+
+    test('handles missing now', () {
+      final g = ProxyGroup.fromJson('g', {
+        'type': 'URLTest',
+        'all': ['a'],
+        'history': [],
+      });
+      expect(g.now, '');
+    });
+  });
+
+  group('ProxiesResult.parse', () {
+    test('separates groups from leaf proxies', () {
+      final raw = {
+        'proxies': {
+          'GLOBAL': {
+            'type': 'Selector',
+            'now': 'proxy1',
+            'all': ['proxy1', 'DIRECT'],
+            'history': [],
+          },
+          'DIRECT': {'type': 'Direct', 'history': []},
+          'proxy1': {'type': 'Shadowsocks', 'history': []},
+        },
+      };
+      final result = ProxiesResult.parse(raw);
+      expect(result.groups.keys, contains('GLOBAL'));
+      expect(result.proxies.keys, containsAll(['DIRECT', 'proxy1']));
+      expect(result.groups.containsKey('DIRECT'), isFalse);
+    });
+  });
+}
