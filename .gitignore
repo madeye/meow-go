@@ -42,6 +42,9 @@ credentials.json
 google-services.json
 fastlane/play-store-key.json
 
-# E2E test artifacts
+# E2E test artifacts — may contain real subscription URLs or device state
 screen_*.png
 /tmp/
+e2e-logcat.log
+e2e-logcat/
+ui_dump*.xml
