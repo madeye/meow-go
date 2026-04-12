@@ -62,13 +62,19 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
       _load();
       return;
     }
-    // Retry if the fallback YAML became available after our initial load.
-    // HomeScreen loads the selected profile asynchronously, so on first
-    // build fallbackYamlContent is null; when it populates, we want to
-    // parse it for the offline display.
+    // Reparse whenever the selected profile's YAML changes — either because
+    // it finished loading after first build (initially null) or because the
+    // user switched subscriptions. Without this, _result stays cached from
+    // the previous profile and the groups list goes stale.
     final oldYaml = old.fallbackYamlContent ?? '';
     final newYaml = widget.fallbackYamlContent ?? '';
-    if (_result == null && oldYaml != newYaml && newYaml.isNotEmpty) {
+    if (oldYaml != newYaml && newYaml.isNotEmpty) {
+      setState(() {
+        _result = null;
+        _selections = Map.from(widget.initialSelections);
+        _delays.clear();
+        _expanded.clear();
+      });
       _load();
     }
   }
