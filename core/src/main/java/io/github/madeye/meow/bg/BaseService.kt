@@ -123,7 +123,7 @@ object BaseService {
         }
     }
 
-    interface Interface {
+    interface Interface : CoroutineScope {
         val data: Data
         val tag: String
         fun createNotification(profileName: String): ServiceNotification
@@ -157,7 +157,7 @@ object BaseService {
         fun stopRunner(restart: Boolean = false, msg: String? = null) {
             if (data.state == State.Stopping) return
             data.changeState(State.Stopping)
-            GlobalScope.launch(Dispatchers.Main.immediate) {
+            launch(Dispatchers.Main.immediate) {
                 data.connectingJob?.cancelAndJoin()
                 this@Interface as Service
                 coroutineScope {
@@ -181,28 +181,27 @@ object BaseService {
             val data = data
             if (data.state != State.Stopped) return Service.START_NOT_STICKY
 
-            val profile = Core.currentProfile
-            this as Context
-            if (profile == null) {
-                data.notification = createNotification("")
-                stopRunner(false, "No profile selected")
-                return Service.START_NOT_STICKY
-            }
-
-            data.mihomoInstance = MihomoInstance(profile)
-
-            if (!data.closeReceiverRegistered) {
-                ContextCompat.registerReceiver(this, data.closeReceiver, IntentFilter().apply {
-                    addAction(Action.RELOAD)
-                    addAction(Intent.ACTION_SHUTDOWN)
-                    addAction(Action.CLOSE)
-                }, ContextCompat.RECEIVER_NOT_EXPORTED)
-                data.closeReceiverRegistered = true
-            }
-
-            data.notification = createNotification(profile.name)
             data.changeState(State.Connecting)
-            data.connectingJob = GlobalScope.launch(Dispatchers.Main.immediate) {
+            data.connectingJob = launch(Dispatchers.Main.immediate) {
+                val profile = Core.currentProfile()
+                if (profile == null) {
+                    data.notification = createNotification("")
+                    stopRunner(false, "No profile selected")
+                    return@launch
+                }
+
+                data.mihomoInstance = MihomoInstance(profile)
+
+                if (!data.closeReceiverRegistered) {
+                    ContextCompat.registerReceiver(this@Interface as Context, data.closeReceiver, IntentFilter().apply {
+                        addAction(Action.RELOAD)
+                        addAction(Intent.ACTION_SHUTDOWN)
+                        addAction(Action.CLOSE)
+                    }, ContextCompat.RECEIVER_NOT_EXPORTED)
+                    data.closeReceiverRegistered = true
+                }
+
+                data.notification = createNotification(profile.name)
                 try {
                     preInit()
                     startProcesses()

@@ -133,7 +133,9 @@ class _TrafficScreenState extends State<TrafficScreen> {
                 ? Center(
                     child: Text(
                       s.noHistoryData,
-                      style: const TextStyle(color: Colors.white38),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   )
                 : _DailyChart(days: _history.days),
@@ -177,7 +179,9 @@ class _TrafficScreenState extends State<TrafficScreen> {
                 ? Center(
                     child: Text(
                       isOn ? s.collectingData : s.connectToSeeTraffic,
-                      style: const TextStyle(color: Colors.white38),
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
                   )
                 : _SpeedChart(samples: _samples),
@@ -212,6 +216,10 @@ class _StatusIndicator extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = S.of(context);
+    final theme = Theme.of(context);
+    final color = connected
+        ? theme.colorScheme.primary
+        : theme.colorScheme.outline;
     return Row(
       children: [
         Container(
@@ -219,14 +227,14 @@ class _StatusIndicator extends StatelessWidget {
           height: 10,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: connected ? Colors.greenAccent : Colors.grey,
+            color: color,
           ),
         ),
         const SizedBox(width: 8),
         Text(
           connected ? s.connected : s.disconnected,
           style: TextStyle(
-            color: connected ? Colors.greenAccent : Colors.grey,
+            color: color,
             fontSize: 13,
           ),
         ),
@@ -288,17 +296,20 @@ class _UsageCard extends StatelessWidget {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, fontFeatures: [FontFeature.tabularFigures()]),
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                Icon(Icons.arrow_upward, size: 12, color: Colors.blue.withAlpha(180)),
-                const SizedBox(width: 2),
-                Text(_TrafficScreenState._formatBytes(tx), style: const TextStyle(fontSize: 11, color: Colors.white54)),
-                const SizedBox(width: 8),
-                Icon(Icons.arrow_downward, size: 12, color: Colors.green.withAlpha(180)),
-                const SizedBox(width: 2),
-                Text(_TrafficScreenState._formatBytes(rx), style: const TextStyle(fontSize: 11, color: Colors.white54)),
-              ],
-            ),
+            Builder(builder: (context) {
+              final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+              return Row(
+                children: [
+                  Icon(Icons.arrow_upward, size: 12, color: Colors.blue.withAlpha(180)),
+                  const SizedBox(width: 2),
+                  Text(_TrafficScreenState._formatBytes(tx), style: TextStyle(fontSize: 11, color: muted)),
+                  const SizedBox(width: 8),
+                  Icon(Icons.arrow_downward, size: 12, color: Colors.green.withAlpha(180)),
+                  const SizedBox(width: 2),
+                  Text(_TrafficScreenState._formatBytes(rx), style: TextStyle(fontSize: 11, color: muted)),
+                ],
+              );
+            }),
           ],
         ),
       ),
@@ -343,14 +354,14 @@ class _StatCard extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
+            Builder(builder: (context) => Text(
               rate,
-              style: const TextStyle(
-                color: Colors.white54,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 fontSize: 12,
-                fontFeatures: [FontFeature.tabularFigures()],
+                fontFeatures: const [FontFeature.tabularFigures()],
               ),
-            ),
+            )),
           ],
         ),
       ),
@@ -370,8 +381,14 @@ class _DailyChart extends StatefulWidget {
 
 class _DailyChartState extends State<_DailyChart> {
   int? _selectedIndex;
+  List<DailyTraffic>? _cachedAllDays;
+  List<DailyTraffic>? _lastDays;
 
-  List<DailyTraffic> _buildAllDays() {
+  List<DailyTraffic> _getAllDays() {
+    if (_cachedAllDays != null && identical(_lastDays, widget.days)) {
+      return _cachedAllDays!;
+    }
+    _lastDays = widget.days;
     final now = DateTime.now();
     final allDays = <DailyTraffic>[];
     for (var i = 29; i >= 0; i--) {
@@ -380,12 +397,13 @@ class _DailyChartState extends State<_DailyChart> {
       final entry = widget.days.cast<DailyTraffic?>().firstWhere((d) => d!.date == key, orElse: () => null);
       allDays.add(entry ?? DailyTraffic(date: key));
     }
+    _cachedAllDays = allDays;
     return allDays;
   }
 
   @override
   Widget build(BuildContext context) {
-    final allDays = _buildAllDays();
+    final allDays = _getAllDays();
     final selected = _selectedIndex != null && _selectedIndex! < allDays.length
         ? allDays[_selectedIndex!]
         : null;
@@ -420,20 +438,23 @@ class _DailyChartState extends State<_DailyChart> {
                         style: const TextStyle(fontSize: 11, color: Colors.green, fontFeatures: [FontFeature.tabularFigures()]),
                       ),
                       const SizedBox(width: 10),
-                      Icon(Icons.swap_vert, size: 11, color: Colors.white54),
+                      Icon(Icons.swap_vert, size: 11, color: Theme.of(context).colorScheme.onSurfaceVariant),
                       const SizedBox(width: 2),
                       Text(
                         _TrafficScreenState._formatBytes(selected.total),
-                        style: const TextStyle(fontSize: 11, color: Colors.white70, fontWeight: FontWeight.w600, fontFeatures: [FontFeature.tabularFigures()]),
+                        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w600, fontFeatures: const [FontFeature.tabularFigures()]),
                       ),
                     ],
                   ),
                 )
-              : const Padding(
-                  padding: EdgeInsets.only(bottom: 4),
+              : Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    'Tap a bar to see details',
-                    style: TextStyle(fontSize: 11, color: Colors.white38),
+                    S.of(context).tapBarHint,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                 ),
         ),
@@ -454,7 +475,14 @@ class _DailyChartState extends State<_DailyChart> {
             },
             child: CustomPaint(
               size: Size.infinite,
-              painter: _DailyChartPainter(days: allDays, selectedIndex: _selectedIndex),
+              painter: _DailyChartPainter(
+                days: allDays,
+                selectedIndex: _selectedIndex,
+                uploadLabel: S.of(context).upload,
+                downloadLabel: S.of(context).download,
+                gridColor: Theme.of(context).colorScheme.outlineVariant,
+                labelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
         ),
@@ -466,7 +494,18 @@ class _DailyChartState extends State<_DailyChart> {
 class _DailyChartPainter extends CustomPainter {
   final List<DailyTraffic> days;
   final int? selectedIndex;
-  _DailyChartPainter({required this.days, this.selectedIndex});
+  final String uploadLabel;
+  final String downloadLabel;
+  final Color gridColor;
+  final Color labelColor;
+  _DailyChartPainter({
+    required this.days,
+    this.selectedIndex,
+    required this.uploadLabel,
+    required this.downloadLabel,
+    required this.gridColor,
+    required this.labelColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -484,18 +523,18 @@ class _DailyChartPainter extends CustomPainter {
     }
 
     // Grid
-    final gridPaint = Paint()..color = Colors.white10..strokeWidth = 0.5;
+    final gridPaint = Paint()..color = gridColor..strokeWidth = 0.5;
     for (var i = 0; i <= 4; i++) {
       final y = (chartH / 4) * i;
       canvas.drawLine(Offset(leftMargin, y), Offset(w, y), gridPaint);
     }
 
     // Y-axis labels
-    final labelStyle = TextStyle(color: Colors.white38, fontSize: 9, fontFeatures: const [FontFeature.tabularFigures()]);
+    final yLabelStyle = TextStyle(color: labelColor, fontSize: 9, fontFeatures: const [FontFeature.tabularFigures()]);
     for (var i = 0; i <= 4; i++) {
       final val = maxTotal * (4 - i) ~/ 4;
       final y = (chartH / 4) * i;
-      _drawText(canvas, _formatBytes(val), Offset(0, y - 6), labelStyle, leftMargin - 4);
+      _drawText(canvas, _formatBytes(val), Offset(0, y - 6), yLabelStyle, leftMargin - 4);
     }
 
     // Bars
@@ -519,7 +558,7 @@ class _DailyChartPainter extends CustomPainter {
       if (isSelected) {
         final highlightRect = Rect.fromLTWH(
           leftMargin + (chartW / barCount) * i, 0, chartW / barCount, chartH);
-        canvas.drawRect(highlightRect, Paint()..color = Colors.white.withAlpha(15));
+        canvas.drawRect(highlightRect, Paint()..color = labelColor.withAlpha(15));
       }
 
       // Download bar
@@ -547,7 +586,7 @@ class _DailyChartPainter extends CustomPainter {
           canvas,
           dateLabel,
           Offset(x - 2, chartH + 4),
-          TextStyle(color: isSelected ? Colors.white : Colors.white38, fontSize: 8,
+          TextStyle(color: labelColor, fontSize: 8,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal),
           40,
         );
@@ -560,13 +599,13 @@ class _DailyChartPainter extends CustomPainter {
       RRect.fromRectAndRadius(Rect.fromLTWH(w / 2 - 80, legendY - 5, 10, 10), const Radius.circular(2)),
       Paint()..color = Colors.blue.withAlpha(180),
     );
-    _drawText(canvas, 'Upload', Offset(w / 2 - 66, legendY - 7), const TextStyle(color: Colors.white54, fontSize: 10), 50);
+    _drawText(canvas, uploadLabel, Offset(w / 2 - 66, legendY - 7), TextStyle(color: labelColor, fontSize: 10), 50);
 
     canvas.drawRRect(
       RRect.fromRectAndRadius(Rect.fromLTWH(w / 2 + 10, legendY - 5, 10, 10), const Radius.circular(2)),
       Paint()..color = Colors.green.withAlpha(180),
     );
-    _drawText(canvas, 'Download', Offset(w / 2 + 24, legendY - 7), const TextStyle(color: Colors.white54, fontSize: 10), 60);
+    _drawText(canvas, downloadLabel, Offset(w / 2 + 24, legendY - 7), TextStyle(color: labelColor, fontSize: 10), 60);
   }
 
   void _drawText(Canvas canvas, String text, Offset offset, TextStyle style, double maxWidth) {
@@ -587,7 +626,8 @@ class _DailyChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DailyChartPainter oldDelegate) =>
-      oldDelegate.selectedIndex != selectedIndex || oldDelegate.days != days;
+      oldDelegate.selectedIndex != selectedIndex || oldDelegate.days != days ||
+      oldDelegate.gridColor != gridColor || oldDelegate.labelColor != labelColor;
 }
 
 // --- Speed chart ---
@@ -605,9 +645,17 @@ class _SpeedChart extends StatelessWidget {
       maxRate = max(maxRate, max(s.txRate, s.rxRate));
     }
 
+    final s = S.of(context);
     return CustomPaint(
       size: const Size(double.infinity, 200),
-      painter: _ChartPainter(samples: samples, maxRate: maxRate),
+      painter: _ChartPainter(
+        samples: samples,
+        maxRate: maxRate,
+        uploadLabel: s.upload,
+        downloadLabel: s.download,
+        gridColor: Theme.of(context).colorScheme.outlineVariant,
+        labelColor: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
     );
   }
 }
@@ -615,8 +663,19 @@ class _SpeedChart extends StatelessWidget {
 class _ChartPainter extends CustomPainter {
   final List<_TrafficSample> samples;
   final int maxRate;
+  final String uploadLabel;
+  final String downloadLabel;
+  final Color gridColor;
+  final Color labelColor;
 
-  _ChartPainter({required this.samples, required this.maxRate});
+  _ChartPainter({
+    required this.samples,
+    required this.maxRate,
+    required this.uploadLabel,
+    required this.downloadLabel,
+    required this.gridColor,
+    required this.labelColor,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -628,17 +687,17 @@ class _ChartPainter extends CustomPainter {
     final chartW = w - margin;
     final chartH = h - 24;
 
-    final gridPaint = Paint()..color = Colors.white10..strokeWidth = 0.5;
+    final gridPaint = Paint()..color = gridColor..strokeWidth = 0.5;
     for (var i = 0; i <= 4; i++) {
       final y = (chartH / 4) * i;
       canvas.drawLine(Offset(margin, y), Offset(w, y), gridPaint);
     }
 
-    final labelStyle = TextStyle(color: Colors.white38, fontSize: 10, fontFeatures: const [FontFeature.tabularFigures()]);
+    final yLabelStyle = TextStyle(color: labelColor, fontSize: 10, fontFeatures: const [FontFeature.tabularFigures()]);
     for (var i = 0; i <= 4; i++) {
       final val = maxRate * (4 - i) / 4;
       final y = (chartH / 4) * i;
-      _drawText(canvas, _formatRate(val.toInt()), Offset(0, y - 6), labelStyle, margin - 4);
+      _drawText(canvas, _formatRate(val.toInt()), Offset(0, y - 6), yLabelStyle, margin - 4);
     }
 
     _drawLine(canvas, samples.map((s) => s.txRate).toList(), Colors.blue, margin, chartW, chartH);
@@ -685,11 +744,11 @@ class _ChartPainter extends CustomPainter {
   void _drawLegend(Canvas canvas, Size size) {
     final y = size.height - 10;
     canvas.drawCircle(Offset(size.width / 2 - 60, y), 4, Paint()..color = Colors.blue);
-    _drawText(canvas, 'Upload', Offset(size.width / 2 - 52, y - 6),
-        const TextStyle(color: Colors.white54, fontSize: 10), 50);
+    _drawText(canvas, uploadLabel, Offset(size.width / 2 - 52, y - 6),
+        TextStyle(color: labelColor, fontSize: 10), 50);
     canvas.drawCircle(Offset(size.width / 2 + 20, y), 4, Paint()..color = Colors.green);
-    _drawText(canvas, 'Download', Offset(size.width / 2 + 28, y - 6),
-        const TextStyle(color: Colors.white54, fontSize: 10), 60);
+    _drawText(canvas, downloadLabel, Offset(size.width / 2 + 28, y - 6),
+        TextStyle(color: labelColor, fontSize: 10), 60);
   }
 
   void _drawText(Canvas canvas, String text, Offset offset, TextStyle style, double maxWidth) {
@@ -708,5 +767,9 @@ class _ChartPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _ChartPainter oldDelegate) => true;
+  bool shouldRepaint(covariant _ChartPainter oldDelegate) =>
+      oldDelegate.samples.length != samples.length ||
+      oldDelegate.maxRate != maxRate ||
+      (samples.isNotEmpty && oldDelegate.samples.last.time != samples.last.time) ||
+      oldDelegate.gridColor != gridColor || oldDelegate.labelColor != labelColor;
 }

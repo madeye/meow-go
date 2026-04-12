@@ -81,12 +81,20 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                     }
                     "getState" -> result.success(state.ordinal)
                     "getProfiles" -> {
-                        val profiles = PrivateDatabase.profileDao.getAll()
-                        result.success(profiles.map { it.toFlutterMap() })
+                        scope.launch(Dispatchers.IO) {
+                            val profiles = PrivateDatabase.profileDao.getAll()
+                            withContext(Dispatchers.Main) {
+                                result.success(profiles.map { it.toFlutterMap() })
+                            }
+                        }
                     }
                     "getSelectedProfile" -> {
-                        val p = PrivateDatabase.profileDao.getSelected()
-                        result.success(p?.toFlutterMap())
+                        scope.launch(Dispatchers.IO) {
+                            val p = PrivateDatabase.profileDao.getSelected()
+                            withContext(Dispatchers.Main) {
+                                result.success(p?.toFlutterMap())
+                            }
+                        }
                     }
                     "addSubscription" -> {
                         val name = call.argument<String>("name") ?: ""
@@ -106,37 +114,43 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         val name = call.argument<String>("name") ?: ""
                         val url = call.argument<String>("url") ?: ""
                         analytics.logEvent("subscription_edit") {}
-                        val existing = PrivateDatabase.profileDao.getById(id)
-                        if (existing != null) {
-                            PrivateDatabase.profileDao.update(existing.copy(name = name, url = url))
-                            scope.launch {
+                        scope.launch {
+                            val existing = withContext(Dispatchers.IO) { PrivateDatabase.profileDao.getById(id) }
+                            if (existing != null) {
+                                withContext(Dispatchers.IO) {
+                                    PrivateDatabase.profileDao.update(existing.copy(name = name, url = url))
+                                }
                                 try {
                                     val updated = SubscriptionService.fetchSubscription(
                                         existing.copy(name = name, url = url)
                                     )
-                                    PrivateDatabase.profileDao.update(updated)
+                                    withContext(Dispatchers.IO) { PrivateDatabase.profileDao.update(updated) }
                                     result.success(null)
                                 } catch (e: Exception) {
                                     result.error("SUB_ERROR", e.message, null)
                                 }
+                            } else {
+                                result.error("NOT_FOUND", "Profile not found", null)
                             }
-                        } else {
-                            result.error("NOT_FOUND", "Profile not found", null)
                         }
                     }
                     "deleteSubscription" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         analytics.logEvent("subscription_delete") {}
-                        val p = PrivateDatabase.profileDao.getById(id)
-                        if (p != null) PrivateDatabase.profileDao.delete(p)
-                        result.success(null)
+                        scope.launch(Dispatchers.IO) {
+                            val p = PrivateDatabase.profileDao.getById(id)
+                            if (p != null) PrivateDatabase.profileDao.delete(p)
+                            withContext(Dispatchers.Main) { result.success(null) }
+                        }
                     }
                     "selectProfile" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         analytics.logEvent("profile_select") {}
-                        PrivateDatabase.profileDao.deselectAll()
-                        PrivateDatabase.profileDao.select(id)
-                        result.success(null)
+                        scope.launch(Dispatchers.IO) {
+                            PrivateDatabase.profileDao.deselectAll()
+                            PrivateDatabase.profileDao.select(id)
+                            withContext(Dispatchers.Main) { result.success(null) }
+                        }
                     }
                     "saveSelectedProxy" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
@@ -144,45 +158,53 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         analytics.logEvent("proxy_node_select") {
                             param("proxy_name", proxyName)
                         }
-                        PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
-                        result.success(null)
+                        scope.launch(Dispatchers.IO) {
+                            PrivateDatabase.profileDao.updateSelectedProxy(id, proxyName)
+                            withContext(Dispatchers.Main) { result.success(null) }
+                        }
                     }
                     "saveSelectedProxies" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         val proxiesJson = call.argument<String>("proxiesJson") ?: "{}"
-                        PrivateDatabase.profileDao.updateSelectedProxies(id, proxiesJson)
-                        result.success(null)
+                        scope.launch(Dispatchers.IO) {
+                            PrivateDatabase.profileDao.updateSelectedProxies(id, proxiesJson)
+                            withContext(Dispatchers.Main) { result.success(null) }
+                        }
                     }
                     "updateProfileYaml" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         val yaml = call.argument<String>("yamlContent") ?: ""
                         analytics.logEvent("profile_yaml_edit") {}
-                        PrivateDatabase.profileDao.updateYamlContent(id, yaml)
-                        result.success(null)
+                        scope.launch(Dispatchers.IO) {
+                            PrivateDatabase.profileDao.updateYamlContent(id, yaml)
+                            withContext(Dispatchers.Main) { result.success(null) }
+                        }
                     }
                     "revertProfileYaml" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         analytics.logEvent("profile_yaml_revert") {}
-                        PrivateDatabase.profileDao.revertYamlContent(id)
-                        val p = PrivateDatabase.profileDao.getById(id)
-                        result.success(p?.yamlContent ?: "")
+                        scope.launch(Dispatchers.IO) {
+                            PrivateDatabase.profileDao.revertYamlContent(id)
+                            val p = PrivateDatabase.profileDao.getById(id)
+                            withContext(Dispatchers.Main) { result.success(p?.yamlContent ?: "") }
+                        }
                     }
                     "refreshSubscription" -> {
                         val id = call.argument<Int>("id")?.toLong() ?: 0L
                         analytics.logEvent("subscription_refresh") {}
-                        val p = PrivateDatabase.profileDao.getById(id)
-                        if (p != null) {
-                            scope.launch {
+                        scope.launch {
+                            val p = withContext(Dispatchers.IO) { PrivateDatabase.profileDao.getById(id) }
+                            if (p != null) {
                                 try {
                                     val updated = SubscriptionService.fetchSubscription(p)
-                                    PrivateDatabase.profileDao.update(updated)
+                                    withContext(Dispatchers.IO) { PrivateDatabase.profileDao.update(updated) }
                                     result.success(null)
                                 } catch (e: Exception) {
                                     result.error("SUB_ERROR", e.message, null)
                                 }
+                            } else {
+                                result.error("NOT_FOUND", "Profile not found", null)
                             }
-                        } else {
-                            result.error("NOT_FOUND", "Profile not found", null)
                         }
                     }
                     "refreshAll" -> {
@@ -257,12 +279,24 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
                         DataStore.perAppPackages = packages
                         result.success(null)
                     }
+                    "getDohServer" -> {
+                        result.success(DataStore.dohServer)
+                    }
+                    "setDohServer" -> {
+                        val server = call.argument<String>("server") ?: ""
+                        DataStore.dohServer = server
+                        result.success(null)
+                    }
                     "getTrafficHistory" -> {
-                        val cutoff = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -31) }
-                        val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-                        PrivateDatabase.dailyTrafficDao.deleteBefore(fmt.format(cutoff.time))
-                        val entries = PrivateDatabase.dailyTrafficDao.getAll()
-                        result.success(entries.map { mapOf("date" to it.date, "tx" to it.tx, "rx" to it.rx) })
+                        scope.launch(Dispatchers.IO) {
+                            val cutoff = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, -31) }
+                            val fmt = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+                            PrivateDatabase.dailyTrafficDao.deleteBefore(fmt.format(cutoff.time))
+                            val entries = PrivateDatabase.dailyTrafficDao.getAll()
+                            withContext(Dispatchers.Main) {
+                                result.success(entries.map { mapOf("date" to it.date, "tx" to it.tx, "rx" to it.rx) })
+                            }
+                        }
                     }
                     "testDirectTcp" -> {
                         val host = call.argument<String>("host") ?: "1.1.1.1"
@@ -378,11 +412,13 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
 
         if (deltaTx > 0 || deltaRx > 0) {
             val today = dateFmt.format(System.currentTimeMillis())
-            val dao = PrivateDatabase.dailyTrafficDao
-            val entry = dao.getByDate(today) ?: DailyTraffic(date = today)
-            if (deltaTx > 0) entry.tx += deltaTx
-            if (deltaRx > 0) entry.rx += deltaRx
-            dao.upsert(entry)
+            scope.launch(Dispatchers.IO) {
+                val dao = PrivateDatabase.dailyTrafficDao
+                val entry = dao.getByDate(today) ?: DailyTraffic(date = today)
+                if (deltaTx > 0) entry.tx += deltaTx
+                if (deltaRx > 0) entry.rx += deltaRx
+                dao.upsert(entry)
+            }
         }
 
         runOnUiThread {

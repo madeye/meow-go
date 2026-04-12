@@ -20,11 +20,14 @@ class LogsScreen extends StatefulWidget {
 
 class _LogsScreenState extends State<LogsScreen> {
   static const _kMaxEntries = 1000;
+  static const _kFlushInterval = Duration(milliseconds: 200);
   static const _levelOptions = ['debug', 'info', 'warning', 'error', 'silent'];
 
   final List<LogEntry> _logs = [];
+  final List<LogEntry> _pending = [];
   final ScrollController _scrollController = ScrollController();
   StreamSubscription<LogEntry>? _subscription;
+  Timer? _flushTimer;
   bool _paused = false;
   bool _autoScroll = true;
   String _level = 'info';
@@ -38,31 +41,46 @@ class _LogsScreenState extends State<LogsScreen> {
   @override
   void dispose() {
     _subscription?.cancel();
+    _flushTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
 
+  void _flushPending() {
+    if (_pending.isEmpty || !mounted) return;
+    setState(() {
+      _logs.addAll(_pending);
+      _pending.clear();
+      if (_logs.length > _kMaxEntries) {
+        _logs.removeRange(0, _logs.length - _kMaxEntries);
+      }
+    });
+    if (_autoScroll && _scrollController.hasClients) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 100),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+  }
+
   void _subscribe() {
     _subscription?.cancel();
+    _flushTimer?.cancel();
     final stream = widget.streamLogsOverride?.call(level: _level) ??
         MihomoApi.instance.streamLogs(level: _level);
     _subscription = stream.listen(
       (entry) {
         if (!mounted || _paused) return;
-        setState(() {
-          _logs.add(entry);
-          if (_logs.length > _kMaxEntries) {
-            _logs.removeRange(0, _logs.length - _kMaxEntries);
-          }
+        _pending.add(entry);
+        _flushTimer ??= Timer(_kFlushInterval, () {
+          _flushTimer = null;
+          _flushPending();
         });
-        if (_autoScroll && _scrollController.hasClients) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (_scrollController.hasClients) {
-              _scrollController
-                  .jumpTo(_scrollController.position.maxScrollExtent);
-            }
-          });
-        }
       },
       onError: (_) {}, // MihomoApi handles reconnection automatically
     );
@@ -90,7 +108,8 @@ class _LogsScreenState extends State<LogsScreen> {
     _subscribe();
   }
 
-  static Color _levelColor(String type) {
+  Color _levelColor(String type) {
+    final theme = Theme.of(context);
     switch (type.toUpperCase()) {
       case 'ERROR':
         return Colors.redAccent;
@@ -100,9 +119,9 @@ class _LogsScreenState extends State<LogsScreen> {
       case 'DEBUG':
         return Colors.blueAccent;
       case 'INFO':
-        return Colors.white60;
+        return theme.colorScheme.onSurfaceVariant;
       default:
-        return Colors.white38;
+        return theme.colorScheme.outline;
     }
   }
 
@@ -161,12 +180,15 @@ class _LogsScreenState extends State<LogsScreen> {
           ? Center(
               child: Text(
                 s.noLogs,
-                style: const TextStyle(color: Colors.white38),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             )
           : ListView.builder(
               controller: _scrollController,
               itemCount: _logs.length,
+              itemExtent: 28.0,
               semanticChildCount: _logs.length,
               itemBuilder: (_, i) => _buildRow(_logs[i]),
             ),
@@ -203,9 +225,9 @@ class _LogsScreenState extends State<LogsScreen> {
             const SizedBox(width: 4),
             Text(
               entry.time,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 9,
-                color: Colors.white30,
+                color: Theme.of(context).colorScheme.outline,
                 fontFamily: 'monospace',
               ),
             ),
@@ -214,10 +236,10 @@ class _LogsScreenState extends State<LogsScreen> {
           Expanded(
             child: Text(
               entry.payload,
-              style: const TextStyle(
+              style: TextStyle(
                 fontFamily: 'monospace',
                 fontSize: 11,
-                color: Colors.white70,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
           ),

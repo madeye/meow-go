@@ -13,6 +13,6 @@ object Core {
         this.app = app
     }
 
-    val currentProfile: ClashProfile?
-        get() = PrivateDatabase.profileDao.getSelected()
+    suspend fun currentProfile(): ClashProfile? =
+        PrivateDatabase.profileDao.getSelected()
 }

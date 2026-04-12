@@ -3,6 +3,7 @@ package io.github.madeye.meow.database
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -36,7 +37,7 @@ class ProfileDaoYamlTest {
     }
 
     @Test
-    fun updateYamlContent_changesContent_keepsBackup() {
+    fun updateYamlContent_changesContent_keepsBackup() = runBlocking {
         val id = dao.insert(
             ClashProfile(
                 name = "test",
@@ -55,7 +56,7 @@ class ProfileDaoYamlTest {
     }
 
     @Test
-    fun revertYamlContent_restoresBackupIntoContent() {
+    fun revertYamlContent_restoresBackupIntoContent() = runBlocking {
         val id = dao.insert(
             ClashProfile(
                 name = "test",
@@ -73,7 +74,7 @@ class ProfileDaoYamlTest {
     }
 
     @Test
-    fun revertYamlContent_isIdempotentWhenAlreadyPristine() {
+    fun revertYamlContent_isIdempotentWhenAlreadyPristine() = runBlocking {
         val id = dao.insert(
             ClashProfile(
                 name = "test",
@@ -90,7 +91,7 @@ class ProfileDaoYamlTest {
     }
 
     @Test
-    fun updateYamlContent_doesNotTouchOtherProfiles() {
+    fun updateYamlContent_doesNotTouchOtherProfiles() = runBlocking {
         val id1 = dao.insert(ClashProfile(name = "a", yamlContent = "x: 1\n", yamlBackup = "x: 1\n"))
         val id2 = dao.insert(ClashProfile(name = "b", yamlContent = "y: 2\n", yamlBackup = "y: 2\n"))
 

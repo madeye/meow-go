@@ -22,7 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _vpn = VpnChannel.instance;
   VpnState _state = VpnState.stopped;
-  TrafficStats _traffic = const TrafficStats();
+  final _traffic = ValueNotifier(const TrafficStats());
   ClashProfile? _profile;
   Map<String, String> _selections = {};
   StreamSubscription? _stateSub;
@@ -41,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     });
     _trafficSub = _vpn.trafficStream.listen((t) {
-      if (mounted) setState(() => _traffic = t);
+      if (mounted) _traffic.value = t;
     });
   }
 
@@ -92,6 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
     profileChanged.removeListener(_loadState);
     _stateSub?.cancel();
     _trafficSub?.cancel();
+    _traffic.dispose();
     super.dispose();
   }
 
@@ -151,26 +152,29 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 ),
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                child: isTransitioning
-                    ? const Padding(
-                        key: ValueKey('spinner'),
-                        padding: EdgeInsets.only(right: 16),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+              Semantics(
+                label: isOn ? s.connected : s.disconnected,
+                toggled: isOn,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: isTransitioning
+                      ? const Padding(
+                          key: ValueKey('spinner'),
+                          padding: EdgeInsets.only(right: 16),
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : Switch(
+                          key: const ValueKey('switch'),
+                          value: isOn,
+                          onChanged: _state.canToggle && !_toggling
+                              ? _toggle
+                              : null,
                         ),
-                      )
-                    : Switch(
-                        key: const ValueKey('switch'),
-                        value: isOn,
-                        onChanged: _state.canToggle && !_toggling
-                            ? _toggle
-                            : null,
-                        activeTrackColor: Colors.greenAccent,
-                      ),
+                ),
               ),
             ],
           ),
@@ -182,31 +186,34 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (isOn)
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: _TrafficTile(
-                        icon: Icons.arrow_upward,
-                        label: s.upload,
-                        rate: _traffic.txRateStr,
-                        total: _traffic.txTotalStr,
+              child: ValueListenableBuilder<TrafficStats>(
+                valueListenable: _traffic,
+                builder: (context, traffic, _) => Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _TrafficTile(
+                          icon: Icons.arrow_upward,
+                          label: s.upload,
+                          rate: traffic.txRateStr,
+                          total: traffic.txTotalStr,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _TrafficTile(
-                        icon: Icons.arrow_downward,
-                        label: s.download,
-                        rate: _traffic.rxRateStr,
-                        total: _traffic.rxTotalStr,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TrafficTile(
+                          icon: Icons.arrow_downward,
+                          label: s.download,
+                          rate: traffic.rxRateStr,
+                          total: traffic.rxTotalStr,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -226,6 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildStatusCard(bool isOn) {
     final s = S.of(context);
+    final theme = Theme.of(context);
     String stateLabel(VpnState state) {
       switch (state) {
         case VpnState.idle:
@@ -241,7 +249,7 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     }
 
-    final color = isOn ? Colors.greenAccent : Colors.grey;
+    final color = isOn ? theme.colorScheme.primary : theme.colorScheme.outline;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Card(
@@ -279,9 +287,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     if (_profile != null)
                       Text(
                         _profile!.name,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
-                          color: Colors.white54,
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                   ],
@@ -310,12 +318,13 @@ class _TrafficTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: Colors.white54),
+            Icon(icon, size: 20, color: theme.colorScheme.onSurfaceVariant),
             const SizedBox(width: 8),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +338,10 @@ class _TrafficTile extends StatelessWidget {
                 ),
                 Text(
                   '$total $label',
-                  style: const TextStyle(fontSize: 11, color: Colors.white38),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ],
             ),

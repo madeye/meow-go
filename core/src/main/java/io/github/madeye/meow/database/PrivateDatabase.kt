@@ -18,7 +18,6 @@ abstract class PrivateDatabase : RoomDatabase() {
     companion object {
         private val instance by lazy {
             Room.databaseBuilder(Core.deviceStorage, PrivateDatabase::class.java, "mihomo.db")
-                .allowMainThreadQueries()
                 .addMigrations(MIGRATION_4_5)
                 .fallbackToDestructiveMigration()
                 .build()

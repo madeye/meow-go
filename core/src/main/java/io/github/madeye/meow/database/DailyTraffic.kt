@@ -12,17 +12,17 @@ data class DailyTraffic(
 @Dao
 interface DailyTrafficDao {
     @Query("SELECT * FROM daily_traffic ORDER BY date ASC")
-    fun getAll(): List<DailyTraffic>
+    suspend fun getAll(): List<DailyTraffic>
 
     @Query("SELECT * FROM daily_traffic WHERE date >= :since ORDER BY date ASC")
-    fun getSince(since: String): List<DailyTraffic>
+    suspend fun getSince(since: String): List<DailyTraffic>
 
     @Query("SELECT * FROM daily_traffic WHERE date = :date")
-    fun getByDate(date: String): DailyTraffic?
+    suspend fun getByDate(date: String): DailyTraffic?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun upsert(entry: DailyTraffic)
+    suspend fun upsert(entry: DailyTraffic)
 
     @Query("DELETE FROM daily_traffic WHERE date < :before")
-    fun deleteBefore(before: String)
+    suspend fun deleteBefore(before: String)
 }

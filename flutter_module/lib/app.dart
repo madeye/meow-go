@@ -15,6 +15,7 @@ class MihomoApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const seedColor = Colors.deepPurple;
     return MaterialApp(
       title: 'Meow',
       debugShowCheckedModeBanner: false,
@@ -24,9 +25,18 @@ class MihomoApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      theme: ThemeData.dark(useMaterial3: true).copyWith(
+      themeMode: ThemeMode.system,
+      theme: ThemeData(
+        useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.deepPurple,
+          seedColor: seedColor,
+          brightness: Brightness.light,
+        ),
+      ),
+      darkTheme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: seedColor,
           brightness: Brightness.dark,
         ),
       ),

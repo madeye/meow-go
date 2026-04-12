@@ -88,9 +88,32 @@ class _RulesScreenState extends State<RulesScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _error
           ? Center(
-              child: Text(
-                s.rulesLoadError,
-                style: const TextStyle(color: Colors.white38),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.error_outline,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.error),
+                  const SizedBox(height: 12),
+                  Text(
+                    s.rulesLoadError,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        _loaded = false;
+                        _error = false;
+                      });
+                      _load();
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: Text(s.retry),
+                  ),
+                ],
               ),
             )
           : items.isEmpty
@@ -98,7 +121,9 @@ class _RulesScreenState extends State<RulesScreen> {
               child: Text(
                 s.noRules,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.white38),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             )
           : ListView.builder(

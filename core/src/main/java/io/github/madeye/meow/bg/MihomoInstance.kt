@@ -4,6 +4,7 @@ import io.github.madeye.meow.aidl.TrafficStats
 import io.github.madeye.meow.core.MihomoEngine
 import io.github.madeye.meow.core.Tun2SocksCore
 import io.github.madeye.meow.database.ClashProfile
+import io.github.madeye.meow.preference.DataStore
 import timber.log.Timber
 import java.io.File
 
@@ -28,7 +29,7 @@ class MihomoInstance(val profile: ClashProfile) {
         //   own resolver is left disabled so the two paths don't race.
         val yaml = profile.yamlContent
             .replace(Regex("(?m)^subscriptions:.*?(?=^[a-z]|\\Z)", RegexOption.DOT_MATCHES_ALL), "")
-            .replace(Regex("(?m)^dns:.*?(?=^[a-z]|\\Z)", RegexOption.DOT_MATCHES_ALL), "dns:\n  enable: false\n")
+            .replace(Regex("(?m)^dns:.*?(?=^[a-z]|\\Z)", RegexOption.DOT_MATCHES_ALL), buildDnsSection())
             .replace(Regex("(?m)^port:.*\n?"), "")
             .replace(Regex("(?m)^socks-port:.*\n?"), "")
             .replace(Regex("(?m)^mixed-port:.*\n?"), "")
@@ -95,6 +96,18 @@ class MihomoInstance(val profile: ClashProfile) {
             } catch (e: Exception) {
                 Timber.w(e, "MihomoInstance: failed to seed $name from assets")
             }
+        }
+    }
+
+    // Build the dns: section for config.yaml. mihomo's own resolver stays
+    // disabled — the nameserver list is only here so the Rust tun2socks DoH
+    // client can discover the user's chosen server from config.yaml.
+    private fun buildDnsSection(): String {
+        val doh = DataStore.dohServer
+        return if (doh.isNotBlank()) {
+            "dns:\n  enable: false\n  nameserver:\n    - $doh\n"
+        } else {
+            "dns:\n  enable: false\n"
         }
     }
 

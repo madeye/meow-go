@@ -10,12 +10,19 @@ import io.github.madeye.meow.net.DefaultNetworkListener
 import io.github.madeye.meow.preference.DataStore
 import org.json.JSONArray
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import kotlin.coroutines.CoroutineContext
 import java.io.File
 import android.net.VpnService as BaseVpnService
 
 class VpnService : BaseVpnService(), BaseService.Interface {
+    private val job = SupervisorJob()
+    override val coroutineContext: CoroutineContext = Dispatchers.Main.immediate + job
+
     companion object {
         private const val VPN_MTU = 1500
         private const val PRIVATE_VLAN4_CLIENT = "172.19.0.1"
@@ -127,6 +134,7 @@ class VpnService : BaseVpnService(), BaseService.Interface {
     }
 
     override fun onDestroy() {
+        cancel()
         super.onDestroy()
         data.binder.close()
     }

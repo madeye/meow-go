@@ -21,41 +21,41 @@ data class ClashProfile(
 @Dao
 interface ProfileDao {
     @Query("SELECT * FROM clash_profile ORDER BY id ASC")
-    fun getAll(): List<ClashProfile>
+    suspend fun getAll(): List<ClashProfile>
 
     @Query("SELECT * FROM clash_profile WHERE selected = 1 LIMIT 1")
-    fun getSelected(): ClashProfile?
+    suspend fun getSelected(): ClashProfile?
 
     @Query("SELECT * FROM clash_profile WHERE id = :id")
-    fun getById(id: Long): ClashProfile?
+    suspend fun getById(id: Long): ClashProfile?
 
     @Insert
-    fun insert(profile: ClashProfile): Long
+    suspend fun insert(profile: ClashProfile): Long
 
     @Update
-    fun update(profile: ClashProfile)
+    suspend fun update(profile: ClashProfile)
 
     @Delete
-    fun delete(profile: ClashProfile)
+    suspend fun delete(profile: ClashProfile)
 
     @Query("UPDATE clash_profile SET selected = 0")
-    fun deselectAll()
+    suspend fun deselectAll()
 
     @Query("UPDATE clash_profile SET selected = 1 WHERE id = :id")
-    fun select(id: Long)
+    suspend fun select(id: Long)
 
     @Query("UPDATE clash_profile SET tx = :tx, rx = :rx WHERE id = :id")
-    fun updateTraffic(id: Long, tx: Long, rx: Long)
+    suspend fun updateTraffic(id: Long, tx: Long, rx: Long)
 
     @Query("UPDATE clash_profile SET selected_proxy = :proxyName WHERE id = :id")
-    fun updateSelectedProxy(id: Long, proxyName: String)
+    suspend fun updateSelectedProxy(id: Long, proxyName: String)
 
     @Query("UPDATE clash_profile SET selected_proxies = :proxiesJson WHERE id = :id")
-    fun updateSelectedProxies(id: Long, proxiesJson: String)
+    suspend fun updateSelectedProxies(id: Long, proxiesJson: String)
 
     @Query("UPDATE clash_profile SET yaml_content = :yaml WHERE id = :id")
-    fun updateYamlContent(id: Long, yaml: String)
+    suspend fun updateYamlContent(id: Long, yaml: String)
 
     @Query("UPDATE clash_profile SET yaml_content = yaml_backup WHERE id = :id")
-    fun revertYamlContent(id: Long)
+    suspend fun revertYamlContent(id: Long)
 }

@@ -121,6 +121,12 @@ class VpnChannel {
   Future<String> getVersion() async =>
       await _method.invokeMethod<String>('getVersion') ?? '';
 
+  Future<String> getDohServer() async =>
+      await _method.invokeMethod<String>('getDohServer') ?? '';
+
+  Future<void> setDohServer(String server) =>
+      _method.invokeMethod('setDohServer', {'server': server});
+
   /// Replay persisted per-group selections after VPN connects.
   ///
   /// Fetches the live proxy list from the embedded engine, then calls

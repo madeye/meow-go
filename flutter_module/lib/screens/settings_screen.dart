@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../l10n/strings.dart';
 import '../models/runtime_config.dart';
 import '../services/mihomo_api.dart';
+import '../services/vpn_channel.dart';
 import 'per_app_proxy_screen.dart';
 import 'logs_screen.dart';
 import 'diagnostics_screen.dart';
@@ -33,12 +34,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _version;
   int? _memInuse;
   int? _memOsLimit;
+  String _dohServer = '';
 
   @override
   void initState() {
     super.initState();
     _loadConfig();
     _loadMeta();
+    _loadDohServer();
+  }
+
+  Future<void> _loadDohServer() async {
+    try {
+      final server = await VpnChannel.instance.getDohServer();
+      if (mounted) setState(() => _dohServer = server);
+    } catch (_) {}
   }
 
   Future<void> _loadMeta() async {
@@ -90,7 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.info_outline),
             title: Text(s.version),
-            subtitle: Text(_version ?? 'Loading...'),
+            subtitle: Text(_version ?? s.versionUnavailable),
           ),
           ListTile(
             leading: const Icon(Icons.apps),
@@ -153,7 +163,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ListTile(
             leading: const Icon(Icons.dns),
             title: Text(s.dnsServer),
-            subtitle: Text(s.dnsBuiltIn),
+            subtitle: Text(_dohServer.isEmpty ? s.dohDefault : _dohServer),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => _showDohDialog(s),
           ),
           ListTile(
             leading: const Icon(Icons.hub),
@@ -181,6 +193,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _showDohDialog(S s) async {
+    final controller = TextEditingController(text: _dohServer);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        return AlertDialog(
+          title: Text(s.dohDialogTitle),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextButton.icon(
+                icon: const Icon(Icons.restore),
+                label: Text(s.dohDefault),
+                onPressed: () => Navigator.pop(ctx, ''),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  labelText: s.dohCustom,
+                  hintText: s.dohHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(s.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final url = controller.text.trim();
+                if (url.isNotEmpty && !url.startsWith('https://')) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(s.dohInvalidUrl)),
+                  );
+                  return;
+                }
+                Navigator.pop(ctx, url);
+              },
+              child: Text(s.save),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null) {
+      setState(() => _dohServer = result);
+      try {
+        await VpnChannel.instance.setDohServer(result);
+      } catch (_) {}
+    }
   }
 }
 

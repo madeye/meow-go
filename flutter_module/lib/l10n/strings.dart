@@ -75,6 +75,7 @@ class S {
   String get thisMonth => 'This Month';
   String get dailyHistory => 'Daily History (30 days)';
   String get noHistoryData => 'No traffic history yet';
+  String get tapBarHint => 'Tap a bar to see details';
 
   // Settings
   String get settings => 'Settings';
@@ -83,13 +84,18 @@ class S {
   String get network => 'Network';
   String get dnsServer => 'DNS Server';
   String get dnsBuiltIn => 'DoH via tun2socks';
+  String get dohDefault => 'Default (1.1.1.1 / 8.8.8.8)';
+  String get dohCustom => 'Custom DoH URL';
+  String get dohDialogTitle => 'DoH Server';
+  String get dohHint => 'https://1.1.1.1/dns-query';
+  String get dohInvalidUrl => 'URL must start with https://';
   String get mixedPort => 'Mixed Port';
   String get mixedPortDesc => '7890 (SOCKS5 + HTTP)';
   String get apiController => 'API Controller';
   String get apiAddr => '127.0.0.1:9090';
   String get about => 'About';
   String get sourceCode => 'Source Code';
-  String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+  String get sourceCodeUrl => 'github.com/madeye/meow-go';
   String get memoryUsage => 'Memory Usage';
   String memoryStats(int inuse, int limit) =>
       '${(inuse / 1048576).toStringAsFixed(1)} MB / ${(limit / 1048576).toStringAsFixed(1)} MB';
@@ -130,6 +136,9 @@ class S {
   String get filterRules => 'Filter by type, payload or proxy...';
   String rulesCount(int n) => '$n rules';
   String get rulesLoadError => 'Failed to load rules';
+  String get retry => 'Retry';
+  String get engineOffline => 'Engine offline';
+  String get versionUnavailable => 'Not available';
 
   // Diagnostics
   String get diagnostics => 'Diagnostics';
@@ -299,6 +308,8 @@ class _Zh extends S {
   String get dailyHistory => '每日流量（30 天）';
   @override
   String get noHistoryData => '暂无流量记录';
+  @override
+  String get tapBarHint => '点击柱状图查看详情';
 
   // Settings
   @override
@@ -314,6 +325,16 @@ class _Zh extends S {
   @override
   String get dnsBuiltIn => '通过 tun2socks DoH 转发';
   @override
+  String get dohDefault => '默认（1.1.1.1 / 8.8.8.8）';
+  @override
+  String get dohCustom => '自定义 DoH 地址';
+  @override
+  String get dohDialogTitle => 'DoH 服务器';
+  @override
+  String get dohHint => 'https://1.1.1.1/dns-query';
+  @override
+  String get dohInvalidUrl => '地址必须以 https:// 开头';
+  @override
   String get mixedPort => '混合端口';
   @override
   String get mixedPortDesc => '7890（SOCKS5 + HTTP）';
@@ -326,7 +347,7 @@ class _Zh extends S {
   @override
   String get sourceCode => '源代码';
   @override
-  String get sourceCodeUrl => 'github.com/madeye/mihomo-android';
+  String get sourceCodeUrl => 'github.com/madeye/meow-go';
   @override
   String get memoryUsage => '内存使用';
   @override
@@ -394,6 +415,12 @@ class _Zh extends S {
   String rulesCount(int n) => '$n 条规则';
   @override
   String get rulesLoadError => '加载规则失败';
+  @override
+  String get retry => '重试';
+  @override
+  String get engineOffline => '引擎离线';
+  @override
+  String get versionUnavailable => '不可用';
 
   // Diagnostics
   @override

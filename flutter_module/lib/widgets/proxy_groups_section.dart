@@ -42,6 +42,7 @@ class ProxyGroupsSection extends StatefulWidget {
 class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
   ProxiesResult? _result;
   bool _loading = false;
+  bool _offline = false;
   final Map<String, int> _delays = {};
   late Map<String, String> _selections;
   final Map<String, bool> _expanded = {};
@@ -81,40 +82,37 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
 
   Future<void> _load() async {
     if (_loading) return;
-    setState(() => _loading = true);
+    _loading = true;
+    _offline = false;
+    if (mounted) setState(() {});
     try {
       final getProxies = widget.getProxiesOverride ?? MihomoApi.instance.getProxies;
       final result = await getProxies();
       if (!mounted) return;
-      final delays = <String, int>{};
       for (final proxy in result.proxies.values) {
-        delays[proxy.name] = proxy.latestDelay;
+        _delays[proxy.name] = proxy.latestDelay;
       }
-      setState(() {
-        _result = result;
-        _delays.addAll(delays);
-        for (final g in result.groups.values) {
-          _selections.putIfAbsent(g.name, () => g.now);
-        }
-      });
+      _result = result;
+      for (final g in result.groups.values) {
+        _selections.putIfAbsent(g.name, () => g.now);
+      }
     } catch (_) {
+      _offline = true;
       // Engine unreachable (typically VPN off). Fall back to parsing the
       // selected profile YAML so users still see their group structure.
       final fallback = widget.fallbackYamlContent;
       if (fallback != null && fallback.isNotEmpty) {
         final parsed = ProxiesResult.fromYaml(fallback);
         if (mounted && parsed.groups.isNotEmpty) {
-          setState(() {
-            _result = parsed;
-            for (final g in parsed.groups.values) {
-              _selections.putIfAbsent(g.name, () => g.now);
-            }
-          });
+          _result = parsed;
+          for (final g in parsed.groups.values) {
+            _selections.putIfAbsent(g.name, () => g.now);
+          }
         }
       }
-      if (mounted) setState(() {});
     } finally {
-      if (mounted) setState(() => _loading = false);
+      _loading = false;
+      if (mounted) setState(() {});
     }
   }
 
@@ -152,8 +150,8 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
     }
   }
 
-  Color _latencyColor(int ms) {
-    if (ms == 0) return Colors.white38;
+  Color _latencyColor(int ms, {Color? mutedColor}) {
+    if (ms == 0) return mutedColor ?? Colors.grey;
     if (ms < 150) return Colors.greenAccent;
     if (ms < 400) return Colors.orangeAccent;
     return Colors.redAccent;
@@ -166,7 +164,7 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
       case 'Fallback': return Colors.amberAccent;
       case 'LoadBalance': return Colors.purpleAccent;
       case 'Relay': return Colors.pinkAccent;
-      default: return Colors.white24;
+      default: return Colors.grey;
     }
   }
 
@@ -192,7 +190,9 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
           child: Text(
             s.noGroups,
             textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.white38),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       );
@@ -204,17 +204,39 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
           if (index == 0) {
             return Padding(
               padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-              child: Text(
-                s.proxyGroups,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                ),
+              child: Row(
+                children: [
+                  Text(
+                    s.proxyGroups,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                  if (_offline) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        s.engineOffline,
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
             );
           }
           final group = groups[index - 1];
+          final theme = Theme.of(context);
           return _GroupCard(
             group: group,
             proxies: _result?.proxies ?? {},
@@ -225,7 +247,7 @@ class _ProxyGroupsSectionState extends State<ProxyGroupsSection> {
             onExpand: (v) => setState(() => _expanded[group.name] = v),
             onSelect: (name) => _selectProxy(group.name, name),
             onTest: widget.isVpnConnected ? () => _testGroupDelay(group.name) : null,
-            latencyColor: _latencyColor,
+            latencyColor: (ms) => _latencyColor(ms, mutedColor: theme.colorScheme.onSurfaceVariant),
             typeBadgeColor: _typeBadgeColor,
           );
         },
@@ -310,7 +332,7 @@ class _GroupCard extends StatelessWidget {
                           const SizedBox(height: 2),
                           Text(
                             selected,
-                            style: const TextStyle(fontSize: 12, color: Colors.white54),
+                            style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
                           ),
                         ],
                       ),
@@ -318,7 +340,7 @@ class _GroupCard extends StatelessWidget {
                     Icon(
                       expanded ? Icons.expand_less : Icons.expand_more,
                       size: 20,
-                      color: Colors.white38,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ],
                 ),
@@ -343,7 +365,7 @@ class _GroupCard extends StatelessWidget {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             ),
                             const SizedBox(width: 6),
-                            Text(s.testing, style: const TextStyle(fontSize: 11, color: Colors.white54)),
+                            Text(s.testing, style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurfaceVariant)),
                           ],
                         ),
                       ),
@@ -365,7 +387,7 @@ class _GroupCard extends StatelessWidget {
                   dense: true,
                   leading: Icon(
                     isSelected ? Icons.check_circle : Icons.circle_outlined,
-                    color: isSelected ? Colors.greenAccent : Colors.white24,
+                    color: isSelected ? Colors.greenAccent : Theme.of(context).colorScheme.outlineVariant,
                     size: 18,
                   ),
                   title: Text(nodeName, style: const TextStyle(fontSize: 13)),
