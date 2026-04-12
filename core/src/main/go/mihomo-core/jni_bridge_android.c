@@ -158,6 +158,37 @@ Java_io_github_madeye_meow_core_MihomoEngine_nativeValidateConfig(JNIEnv *env, j
 }
 
 JNIEXPORT jstring JNICALL
+Java_io_github_madeye_meow_core_MihomoEngine_nativeConvertSubscription(JNIEnv *env, jclass clazz, jbyteArray raw) {
+    if (raw == NULL) { return NULL; }
+    jsize len = (*env)->GetArrayLength(env, raw);
+    if (len <= 0) { return NULL; }
+    jbyte *bytes = (*env)->GetByteArrayElements(env, raw, NULL);
+    if (bytes == NULL) { return NULL; }
+
+    // Converted clash YAML for a nodelist with ~20 proxies comfortably
+    // fits in 64 KiB. Use a heap buffer (not the 512-byte stack STR_BUF
+    // the other exports use) so we don't silently truncate long subs.
+    const int OUT_CAP = 64 * 1024;
+    char *out = (char *)malloc(OUT_CAP);
+    if (out == NULL) {
+        (*env)->ReleaseByteArrayElements(env, raw, bytes, JNI_ABORT);
+        return NULL;
+    }
+    out[0] = 0;
+
+    int rc = (int)meowConvertSubscription((char *)bytes, (int)len, out, OUT_CAP);
+    (*env)->ReleaseByteArrayElements(env, raw, bytes, JNI_ABORT);
+
+    if (rc < 0) {
+        free(out);
+        return NULL;
+    }
+    jstring result = (*env)->NewStringUTF(env, out);
+    free(out);
+    return result;
+}
+
+JNIEXPORT jstring JNICALL
 Java_io_github_madeye_meow_core_MihomoEngine_nativeGetLastError(JNIEnv *env, jclass clazz) {
     char buf[STR_BUF];
     buf[0] = 0;

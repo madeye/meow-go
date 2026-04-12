@@ -5,6 +5,7 @@ go 1.23
 require (
 	github.com/metacubex/mihomo v1.19.23
 	golang.org/x/net v0.35.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
@@ -107,5 +108,4 @@ require (
 	golang.org/x/time v0.10.0 // indirect
 	golang.org/x/tools v0.24.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

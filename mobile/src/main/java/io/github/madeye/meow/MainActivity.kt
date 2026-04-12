@@ -53,6 +53,10 @@ class MainActivity : FlutterActivity(), MihomoConnection.Callback {
         if (intent?.getBooleanExtra("auto_connect", false) == true) {
             pendingConnect = true
         }
+
+        if (BuildConfig.DEBUG) {
+            scope.launch { SubscriptionService.refreshAll() }
+        }
     }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

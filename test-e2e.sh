@@ -110,34 +110,25 @@ sleep 1
 kill -0 "$SSSERVER_PID" 2>/dev/null || fail "ssserver failed to start"
 info "ssserver running (PID $SSSERVER_PID)"
 
-# Step 3: Subscription HTTP server
+# Step 3: Subscription HTTP server — serves a base64 nodelist fixture
+#         so the e2e exercises the v2rayN conversion path in mihomo-core.
 info "Step 3: Starting subscription HTTP server on port $SUB_PORT ..."
 mkdir -p /tmp/test-sub
-cat > /tmp/test-sub/config.yaml <<SUBEOF
-mixed-port: 7890
-mode: rule
-log-level: info
-allow-lan: false
-dns:
-  enable: true
-  listen: 127.0.0.1:1053
-  nameserver:
-    - 114.114.114.114
-proxies:
-  - name: test-ss
-    type: ss
-    server: $SS_HOST_FROM_EMU
-    port: $SS_PORT
-    cipher: $SS_METHOD
-    password: $SS_PASSWORD
-proxy-groups:
-  - name: Proxy
-    type: select
-    proxies:
-      - test-ss
-rules:
-  - MATCH,test-ss
-SUBEOF
+
+# Build a synthetic nodelist: two ss:// URIs pointing at the host
+# ssserver running on $SS_HOST_FROM_EMU:$SS_PORT with the same
+# credentials the old YAML fixture used. Base64-wrap the whole thing
+# the way v2rayN subscription feeds do. No real tokens, no real UUIDs —
+# everything here is derived from the shell vars at the top of this file.
+SS_USERINFO_B64=$(printf '%s:%s' "$SS_METHOD" "$SS_PASSWORD" | base64 | tr -d '\n')
+NODELIST_PLAIN=$(printf 'ss://%s@%s:%s#test-node-1\nss://%s@%s:%s#test-node-2\n' \
+    "$SS_USERINFO_B64" "$SS_HOST_FROM_EMU" "$SS_PORT" \
+    "$SS_USERINFO_B64" "$SS_HOST_FROM_EMU" "$SS_PORT")
+printf '%s' "$NODELIST_PLAIN" | base64 | tr -d '\n' > /tmp/test-sub/nodelist.txt
+
+info "  Nodelist fixture:"
+info "    plain:  $(printf '%s' "$NODELIST_PLAIN" | tr '\n' ' ')"
+info "    base64: $(cat /tmp/test-sub/nodelist.txt)"
 
 cd /tmp/test-sub && python3 -m http.server "$SUB_PORT" &
 HTTPD_PID=$!
@@ -199,7 +190,20 @@ screenshot "01_init"
 sleep 2
 
 info "  Creating database with subscription profile on host..."
-SUB_YAML=$(cat /tmp/test-sub/config.yaml)
+PLACEHOLDER_YAML=$(cat <<'YAML'
+mixed-port: 7890
+mode: rule
+proxies:
+  - name: placeholder
+    type: direct
+proxy-groups:
+  - name: Proxy
+    type: select
+    proxies: [placeholder]
+rules:
+  - MATCH,placeholder
+YAML
+)
 
 # Create a fresh Room database on the host with the correct schema.
 # Schema must match core/schemas/io.github.madeye.meow.database.PrivateDatabase/4.json —
@@ -229,7 +233,7 @@ CREATE TABLE IF NOT EXISTS daily_traffic (
     PRIMARY KEY(date)
 );
 INSERT INTO clash_profile (name, url, yaml_content, selected, last_updated, tx, rx, selected_proxy, yaml_backup)
-VALUES ('Test Sub', 'http://$SS_HOST_FROM_EMU:$SUB_PORT/config.yaml', '$(echo "$SUB_YAML" | sed "s/'/''/g")', 1, $(date +%s), 0, 0, '', '');
+VALUES ('Test Sub', 'http://$SS_HOST_FROM_EMU:$SUB_PORT/nodelist.txt', '$(echo "$PLACEHOLDER_YAML" | sed "s/'/''/g")', 1, 0, 0, 0, '', '');
 DBEOF
 
 info "  Verifying profile..."
@@ -255,6 +259,31 @@ info "Step 7: Enabling VPN..."
 info "  Pre-granting android:activate_vpn AppOp..."
 "$ADB" shell appops set "$PKG" ACTIVATE_VPN allow 2>/dev/null || true
 "$ADB" shell cmd appops set "$PKG" android:activate_vpn allow 2>/dev/null || true
+
+# Force a profile refresh so the nodelist is fetched, converted, and
+# written to yaml_content before VpnService.start tries to read it.
+# Launch the app without auto_connect, let SubscriptionService.refreshAll
+# run (triggered by MainActivity.onCreate's DEBUG-gated call), then wait
+# for yaml_content to contain the converted node name.
+info "  Refreshing subscription via app (no auto-connect yet)..."
+"$ADB" shell am start -W -n "$PKG/$ACTIVITY"
+sleep 6
+"$ADB" shell am broadcast -a io.github.madeye.meow.REFRESH_SELECTED >/dev/null 2>&1 || true
+REFRESH_OK=false
+for i in $(seq 1 30); do
+    FILLED=$("$ADB" shell "run-as $PKG sqlite3 databases/mihomo.db 'SELECT yaml_content FROM clash_profile WHERE selected=1;'" 2>/dev/null | tr -d '\r')
+    if echo "$FILLED" | grep -q 'test-node-1'; then
+        REFRESH_OK=true
+        info "  yaml_content populated after ${i}s"
+        break
+    fi
+    sleep 1
+done
+if [[ "$REFRESH_OK" != "true" ]]; then
+    fail "Subscription did not refresh within 30s — nodelist conversion broken?"
+fi
+"$ADB" shell am force-stop "$PKG"
+sleep 2
 
 # Launch app with auto_connect=true intent extra — triggers VPN start once service reports Stopped
 "$ADB" shell am start -W -n "$PKG/$ACTIVITY" --ez auto_connect true
