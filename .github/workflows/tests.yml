@@ -47,6 +47,11 @@ jobs:
       - name: Flutter pub get
         run: cd flutter_module && flutter pub get
 
+      - name: Install Android NDK
+        run: |
+          echo "y" | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;28.2.13676358" "ndk;27.0.12077973"
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+
       - name: Gradle cache
         uses: actions/cache@v4
         with:
