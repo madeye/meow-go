@@ -34,6 +34,14 @@ object MihomoEngine {
     external fun nativeGetUploadTraffic(): Long
     external fun nativeGetDownloadTraffic(): Long
     external fun nativeValidateConfig(yaml: String): Int
+
+    /**
+     * Converts a v2rayN-style nodelist subscription body into a minimal
+     * clash YAML document. Returns null on failure; call
+     * [nativeGetLastError] to get the reason.
+     */
+    external fun nativeConvertSubscription(raw: ByteArray): String?
+
     external fun nativeGetLastError(): String
     external fun nativeVersion(): String
     external fun nativeTestDirectTcp(host: String, port: Int): String

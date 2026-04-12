@@ -84,6 +84,19 @@ func meowValidateConfig(cyaml *C.char, length C.int) C.int {
 	return 0
 }
 
+//export meowConvertSubscription
+func meowConvertSubscription(craw *C.char, length C.int, dst *C.char, cap C.int) C.int {
+	buf := C.GoBytes(unsafe.Pointer(craw), length)
+	yaml, err := convertSubscription(buf)
+	if err != nil {
+		setLastError(err.Error())
+		return -1
+	}
+	cmsg := C.CString(yaml)
+	defer C.free(unsafe.Pointer(cmsg))
+	return C.meow_fill_string(dst, cap, cmsg)
+}
+
 //export meowGetLastError
 func meowGetLastError(dst *C.char, cap C.int) C.int {
 	msg := getLastError()
