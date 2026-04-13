@@ -8,7 +8,7 @@ A Clash/mihomo Android client with Flutter UI, powered by upstream [mihomo](http
 
 ## Download
 
-[<img src="https://img.shields.io/badge/Download_from-GitHub-333?style=for-the-badge&logo=github&logoColor=white" alt="Download from GitHub" height="80">](https://github.com/madeye/meow-go/releases/latest)
+[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="80">](https://play.google.com/store/apps/details?id=io.github.madeye.meow)
 
 ## Architecture
 
